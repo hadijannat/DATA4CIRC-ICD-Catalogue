@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: DS4CIRC Portal SSO and Deep-Link API (ICD-01)
+  version: "1.0"
+  description: >
+    Portal-level interface for SSO, deep linking, and role propagation between
+    DATA4CIRC Portal and DS4CIRC Portal.
+servers:
+  - url: https://{DS4CIRC_PORTAL_HOST}
+    variables:
+      DS4CIRC_PORTAL_HOST:
+        default: portal.ds4circ.data4circ.example.org
+
+paths:
+  /sso/v1/launch:
+    get:
+      summary: Deep-link launch endpoint
+      description: >
+        Validates deep-link parameters, initiates OpenID Connect authentication,
+        and redirects to the validated target route after session establishment.
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Relative DS4CIRC Portal route. Shall start with '/' and shall not contain scheme, host, or fragment.
+        - name: context
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Base64URL-encoded JSON object conforming to PortalDeepLinkContext.
+        - name: return_url
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Absolute HTTPS return URL validated against an allow list.
+        - name: ui_locales
+          in: query
+          required: false
+          schema:
+            type: string
+          description: OpenID Connect ui_locales parameter forwarded to the identity provider.
+        - name: prompt
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [none, login]
+          description: OpenID Connect prompt parameter.
+      responses:
+        "302":
+          description: Redirect to identity provider authorisation endpoint.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        "400":
+          description: Invalid deep-link request.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: Rate limit exceeded.
+        "503":
+          description: Identity provider unavailable.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /sso/v1/callback:
+    get:
+      summary: OpenID Connect redirect URI callback
+      description: >
+        Processes the identity provider callback, exchanges the authorisation code
+        for tokens, validates tokens, establishes session, and redirects to the target.
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: session_state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to validated target route.
+          headers:
+            Location:
+              schema:
+                type: string
+        "401":
+          description: Authentication or token validation failure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "409":
+          description: State or nonce validation failure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: Identity provider unavailable.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /sso/v1/session:
+    get:
+      summary: Session introspection
+      description: Returns session status and selected identity attributes for UI consumption.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Session status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionInfo"
+
+  /sso/v1/logout:
+    get:
+      summary: Logout and RP-initiated logout redirect
+      description: Invalidates portal session and redirects to identity provider end-session endpoint.
+      parameters:
+        - name: post_logout_redirect_uri
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: return_url
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+      responses:
+        "302":
+          description: Redirect to identity provider end-session endpoint or post-logout location.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        "400":
+          description: Invalid post-logout redirect URI.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: DS4CIRC_SESSION
+
+  schemas:
+    PortalDeepLinkContext:
+      type: object
+      required: [version, correlation_id, source_portal]
+      properties:
+        version:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+        source_portal:
+          type: string
+          enum: [DATA4CIRC]
+        return_url:
+          type: string
+          format: uri
+        organisation_id:
+          type: string
+          format: uuid
+        issued_at:
+          type: integer
+          description: Unix time (s)
+        expires_at:
+          type: integer
+          description: Unix time (s)
+        target_resource:
+          type: object
+          additionalProperties: true
+
+    SessionInfo:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated:
+          type: boolean
+        sub:
+          type: string
+        preferred_username:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+        session_id:
+          type: string
+        expires_in:
+          type: integer
+          description: Seconds until expiry
+
+    ProblemDetails:
+      type: object
+      required: [type, title, status, error_code]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        error_code:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
