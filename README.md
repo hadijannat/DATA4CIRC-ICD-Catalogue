@@ -8,6 +8,15 @@ This repository contains the Interface Control Document (ICD) specifications for
 
 ## Repository Structure
 
+| Directory | Description |
+|-----------|-------------|
+| `catalogue/` | Master ICD register and identifier authority |
+| `templates/` | Universal ICD template with completion instructions |
+| `schemas/` | JSON Schema and OpenAPI template definitions |
+| `icds/` | Completed ICD specifications by category |
+
+### Repository Layout
+
 ```
 DATA4CIRC-ICD-Catalogue/
 ├── README.md                          # Repository documentation
@@ -45,15 +54,10 @@ DATA4CIRC-ICD-Catalogue/
 
 ## Creating a New ICD
 
-The ICD authoring workflow consists of four steps:
-
-1. **Register the Interface**: Add a new entry to `catalogue/ICD_CATALOGUE.md` with the assigned ICD identifier, interface description, technology qualifiers, and responsible work package.
-
-2. **Create ICD Directory**: Create a new directory under the appropriate category folder in `icds/` following the naming convention `ICD-XX/`.
-
-3. **Copy Template**: Copy `templates/ICD_TEMPLATE.md` to the new ICD directory and rename to match the ICD identifier (e.g., `ICD-05.md`).
-
-4. **Complete Sections**: Follow the embedded instructions in the template to complete all mandatory sections. Execute the Quality Checklist (Annex D) prior to submission.
+1. Register the interface in `catalogue/ICD_CATALOGUE.md`
+2. Copy `templates/ICD_TEMPLATE.md` to the appropriate category folder
+3. Follow the instructions in `templates/TEMPLATE_INSTRUCTIONS.md`
+4. Submit a pull request for peer review
 
 ### Command Line Quick Start
 
@@ -95,6 +99,8 @@ All content within this repository shall conform to the following mandatory writ
 | No filler words | Remove qualifiers or use precise terms (remove "greatly", "heavily", "very") |
 | No colloquialisms | Use formal terminology (retrieve, store, not "get", "put") |
 | No em dashes | Use commas or parentheses instead |
+| No ambiguous quantifiers | Use specific values (< 200 ms, 10 MB maximum) |
+| Lowercase unless proper noun | Use lower case for common nouns (digital product passport tool) |
 | Units mandatory | All numerical values shall include units of measure |
 
 ## Normative References
