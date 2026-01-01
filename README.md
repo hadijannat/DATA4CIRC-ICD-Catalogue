@@ -11,7 +11,7 @@ This repository contains the Interface Control Document (ICD) specifications for
 The following diagram illustrates the DATA4CIRC federated dataspace architecture, showing the relationships between work packages and interface control documents:
 
 <p align="center">
-  <img src="./assets/architecture-animated.svg" alt="DATA4CIRC Architecture" width="100%">
+  <img src="./assets/architecture-diagram.png" alt="DATA4CIRC Architecture" width="100%">
 </p>
 
 The architecture comprises three main service domains within the Inter-Organisational Stack:
