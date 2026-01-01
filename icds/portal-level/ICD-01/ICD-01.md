@@ -9,8 +9,8 @@
 | **Version** | 1.0 |
 | **Date** | 30 December 2025 |
 | **Work Package** | WP3 |
-| **Author(s)** | RWTH Aachen University (RWTH); Nippon Telegraph and Telephone Corporation (NTT) |
-| **Provider Owner** | DS4CIRC Portal owner (NTT) |
+| **Author(s)** | RWTH Aachen University (RWTH); NTT Data |
+| **Provider Owner** | DS4CIRC Portal owner (NTT Data) |
 | **Consumer Owner** | DATA4CIRC Portal owner (RWTH) |
 | **Reviewer** | Consortium architecture and security review (IDE) |
 | **Status** | Approved |
@@ -30,7 +30,7 @@ ICD-01 specifies the portal-level interface that provides Single Sign-On (SSO), 
 | **Name** | DATA4CIRC Portal (central portal) | DS4CIRC Portal (domain portal) |
 | **Role** | Consumer (initiates deep link navigation and consumes portal session) | Provider (terminates authentication flow, establishes session, enforces RBAC) |
 | **Work Package** | WP4 (platform access and orchestration) | WP3 (dataspace services and portal) |
-| **Responsible Partner** | RWTH | NTT |
+| **Responsible Partner** | RWTH | NTT Data |
 
 ### 1.3 Architectural Context
 
@@ -1063,8 +1063,8 @@ volumes:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 0.1 | 15 December 2025 | RWTH; NTT | Initial draft aligned with ICD template and portal-level requirements. |
-| 1.0 | 30 December 2025 | RWTH; NTT | Finalised ICD-01: endpoint contract, data structures, security controls, performance targets, RTM, acceptance criteria, and annex artefacts. |
+| 0.1 | 15 December 2025 | RWTH; NTT Data | Initial draft aligned with ICD template and portal-level requirements. |
+| 1.0 | 30 December 2025 | RWTH; NTT Data | Finalised ICD-01: endpoint contract, data structures, security controls, performance targets, RTM, acceptance criteria, and annex artefacts. |
 
 ---
 
