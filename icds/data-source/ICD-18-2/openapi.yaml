@@ -162,6 +162,15 @@ components:
             source_id:
               type: string
               pattern: ^[A-Za-z0-9._-]{1,128}$
+            opcua_node_id:
+              type: string
+              maxLength: 256
+            opcua_browse_name:
+              type: string
+              maxLength: 256
+            opcua_namespace:
+              type: integer
+              minimum: 0
         trace: &id002
           type: object
           additionalProperties: false

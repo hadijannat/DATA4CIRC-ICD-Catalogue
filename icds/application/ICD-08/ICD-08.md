@@ -557,6 +557,8 @@ The DPP representation uses a set of submodels. Submodels align with registered 
 | EndOfLife | DATA4CIRC semanticId urn:data4circ:dpp:submodel:end-of-life:v1 | Restricted | End-of-life status, recycling and disposal instructions, and archival state |
 | AuditTrail | DATA4CIRC semanticId urn:data4circ:dpp:submodel:audit-trail:v1 | Restricted | Immutable audit events and integrity hashes |
 
+Submodel element semanticId values shall reference standard concept descriptions where available. International Registration Data Identifier (IRDI) values from ECLASS or Uniform Resource Identifier (URI) references to IEC Common Data Dictionary concepts shall be used for properties with standardised semantics, including material classification, mass, and dimensional attributes. Where no standard concept description exists, semanticId values shall use DATA4CIRC namespace URNs under configuration management.
+
 ### 6.4 Data Governance and Compliance
 
 Data governance distinguishes public information from restricted information. Restricted information includes proprietary product data, maintenance records, ownership records, and audit records. Ownership records include personal data for natural-person ownership scenarios. Access to personal data is restricted to authorised parties and is processed in alignment with General Data Protection Regulation (GDPR) principles, including purpose limitation, data minimisation, integrity, confidentiality, and accountability. Availability and retention of DPP information are aligned with Ecodesign for Sustainable Products Regulation (ESPR) requirements on DPP availability and backup handling.

@@ -20,6 +20,14 @@ paths:
           in: path
           required: true
           schema: { type: string, maxLength: 128 }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 1000 }
         - name: If-None-Match
           in: header
           required: false
@@ -252,6 +260,8 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/BomItem" }
+        paging:
+          $ref: "#/components/schemas/Paging"
     BomItem:
       type: object
       required: [itemId, componentId, componentName, quantity, unit, material]
@@ -270,6 +280,12 @@ components:
       properties:
         classificationSystem: { type: string }
         classificationId: { type: string }
+    Paging:
+      type: object
+      properties:
+        cursor: { type: string }
+        limit: { type: integer, minimum: 1, maximum: 1000 }
+        total: { type: integer, minimum: 0 }
     InventoryJobCreateRequest:
       type: object
       required: [productId, goalScope, functionalUnit, lifeCycleModel]

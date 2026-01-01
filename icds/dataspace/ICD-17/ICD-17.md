@@ -261,6 +261,12 @@ For Message Queuing Telemetry Transport (MQTT) and asynchronous interfaces, erro
 | consumerPid | string | Yes | Consumer process identifier used by provider-to-consumer callback endpoints. |
 | callback | string | Conditional | Callback path prefix used by provider-to-consumer callback endpoints when callbackAddress contains an additional path segment. |
 
+#### 5.1.2 Data Plane Transfer Types
+
+Transfer requests include dspace:dataAddress objects describing the transfer source or destination. The supported Eclipse Dataspace Connector (EDC) data plane types are HttpData for source addresses and HttpProxy for destination addresses. DataAddress objects shall include @type set to one of the supported types and the required connection properties for the selected type. Unsupported data plane types are rejected with HTTP 422 and an RFC 9457 problem details response.
+
+EDC management API endpoints and data plane registration interfaces are outside the scope of ICD-17 and are not part of the connector-to-connector Dataspace Protocol (DSP) interface.
+
 ### 5.2 Request and Response Examples
 
 **Example 5.2-A: Catalogue request**

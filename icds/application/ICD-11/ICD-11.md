@@ -50,6 +50,7 @@ This section provides mandatory writing conventions and completion instructions 
 ### 1.1 Purpose
 
 ICD-11 specifies the interface contract between the Digital Product Passport/Asset Administration Shell (DPP/AAS) Application and the Life Cycle Assessment (LCA) Application for transfer of product Bill of Materials (BOM) data and derived Life Cycle Inventory (LCI) datasets. The interface provides authenticated retrieval of a BOM snapshot associated with a selected product and a service endpoint for generation of an inventory dataset normalised to the declared functional unit and life cycle model. The interface specification includes message structures, endpoint definitions, security controls, performance targets, and verification criteria aligned with DATA4CIRC Software Requirements Specifications in Deliverable D2.2.
+Publication of LCA assessment results to DPP/AAS submodels (for example, IDTA Carbon Footprint) uses the DPP/AAS application programming interface (API) defined in ICD-08 and is outside the scope of ICD-11.
 
 ### 1.2 Communicating Components
 
@@ -213,6 +214,8 @@ Path and query parameters are specified in Table 5-2.
 | jobId | UUID (path) | Yes | Inventory job identifier returned by job creation operation. |
 | Idempotency-Key | UUID (header) | Yes (POST /inventory-jobs) | Idempotency key for duplicate suppression of job creation requests. |
 | If-None-Match | string (header) | No | ETag value for conditional BOM retrieval. |
+| cursor | string (query) | No | Cursor for paginated BOM retrieval. When provided, the response contains a paging block with next cursor when additional items exist. |
+| limit | integer (query) | No | Maximum number of BOM items to return per response. Range: 1 to 1000. |
 | Accept-Language | string (header) | No | Preferred language for human-readable error titles (BCP 47 tag). |
 | X-Request-ID | string (header) | No | Client-provided request correlation identifier; propagated in responses and logs. |
 
@@ -292,6 +295,10 @@ Not applicable. ICD-11 defines no event-driven or MQTT-based messaging interface
 | Bom.etag | String | HTTP ETag | N/A | Y | Entity tag for optimistic concurrency and caching. |
 | Bom.generatedAt | String | ISO 8601 date-time | N/A | Y | Snapshot generation timestamp. |
 | Bom.items[] | Array | JSON array | N/A | Y | List of BOM items. |
+| Bom.paging | Object | JSON | N/A | N | Pagination metadata for partial BOM retrieval. |
+| Bom.paging.cursor | String | UTF-8 | N/A | N | Cursor for the current page. |
+| Bom.paging.limit | Integer | count | N/A | N | Maximum items returned in the page. |
+| Bom.paging.total | Integer | count | N/A | N | Total number of BOM items when available. |
 | Bom.items[].itemId | String | URI-safe string | N/A | Y | BOM item identifier. |
 | Bom.items[].parentItemId | String | URI-safe string | N/A | N | Parent item identifier for hierarchical BOM. |
 | Bom.items[].componentId | String | URI-safe string | N/A | Y | Component identifier (part number or internal ID). |
@@ -787,6 +794,14 @@ paths:
           in: path
           required: true
           schema: { type: string, maxLength: 128 }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 1000 }
         - name: If-None-Match
           in: header
           required: false
@@ -1019,6 +1034,8 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/BomItem" }
+        paging:
+          $ref: "#/components/schemas/Paging"
     BomItem:
       type: object
       required: [itemId, componentId, componentName, quantity, unit, material]
@@ -1037,6 +1054,12 @@ components:
       properties:
         classificationSystem: { type: string }
         classificationId: { type: string }
+    Paging:
+      type: object
+      properties:
+        cursor: { type: string }
+        limit: { type: integer, minimum: 1, maximum: 1000 }
+        total: { type: integer, minimum: 0 }
     InventoryJobCreateRequest:
       type: object
       required: [productId, goalScope, functionalUnit, lifeCycleModel]
