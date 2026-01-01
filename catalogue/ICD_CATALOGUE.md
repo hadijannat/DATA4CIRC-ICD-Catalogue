@@ -44,7 +44,7 @@ This catalogue serves as the interface register and identifier authority for the
 
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
-| [ICD-05](../icds/governance/ICD-05/ICD-05.md) | SPIP Agent ↔ Dataspace Connector | Policy enforcement, access control | WP4 | Draft |
+| [ICD-05](../icds/governance/ICD-05/ICD-05.md) | SPIP Agent ↔ Dataspace Connector | Policy enforcement, access control | WP3 | Approved |
 | [ICD-06](../icds/governance/ICD-06/ICD-06.md) | SPIP Agent ↔ Identity Provider | Authentication, token exchange | WP4 | Draft |
 | [ICD-07](../icds/governance/ICD-07/ICD-07.md) | SPIP Agent ↔ Policy Repository | Policy retrieval, caching | WP4 | Draft |
 

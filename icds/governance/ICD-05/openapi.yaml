@@ -1,0 +1,695 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-5 SPIP Agent - Dataspace Connector API
+  version: 1.0.0
+  description: >
+    Governance interface for policy-enforced exchange between the Secure Policy Information Point Agent
+    and the Dataspace Connector. The interface supports policy evaluation, transfer context initialisation,
+    payload encryption and decryption, and audit event submission.
+servers:
+  - url: https://{spipAgentHost}:{spipAgentPort}/api/v1
+    description: Internal service endpoint
+    variables:
+      spipAgentHost:
+        default: spip-agent
+      spipAgentPort:
+        default: "8443"
+security:
+  - mTLS: []
+    oauth2ClientCredentials:
+      - spip.execute
+
+paths:
+  /policy/evaluate:
+    post:
+      operationId: evaluatePolicy
+      summary: Evaluate an access request against usage control and access control policies.
+      description: >
+        Evaluates a transfer or access request using Attribute-Based Access Control inputs and a referenced
+        or embedded policy artefact. The response contains an explicit permit or deny decision, obligations,
+        and an enforcement session identifier.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyEvaluationRequest'
+      responses:
+        '200':
+          description: Policy decision returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyEvaluationResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /transfers/egress/prepare:
+    post:
+      operationId: prepareEgressTransfer
+      summary: Initialise an egress transfer context for payload encryption.
+      description: >
+        Creates a transfer-specific cryptographic context for outbound payload encryption. The response
+        contains a SPIP transfer identifier and a cryptographic envelope containing an Attribute-Based
+        Encryption-wrapped content encryption key.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EgressPrepareRequest'
+      responses:
+        '200':
+          description: Transfer context created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /transfers/ingress/prepare:
+    post:
+      operationId: prepareIngressTransfer
+      summary: Initialise an ingress transfer context for payload decryption.
+      description: >
+        Creates a transfer-specific cryptographic context for inbound payload decryption. The request
+        contains a cryptographic envelope received from a data provider. The response contains a SPIP
+        transfer identifier used for the decryption endpoint.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngressPrepareRequest'
+      responses:
+        '200':
+          description: Transfer context created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrepareResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /transfers/{spipTransferId}/encrypt:
+    put:
+      operationId: encryptPayload
+      summary: Encrypt a plaintext payload stream under an egress transfer context.
+      description: >
+        Accepts an application/octet-stream plaintext payload and returns an encrypted payload stream.
+        The endpoint is non-idempotent due to per-request nonce generation.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - name: spipTransferId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Ciphertext payload stream.
+          headers:
+            X-SPIP-Envelope-Id:
+              description: Envelope identifier bound to the ciphertext.
+              schema:
+                type: string
+                format: uuid
+            X-SPIP-Content-Encryption:
+              description: Content encryption algorithm identifier.
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /transfers/{spipTransferId}/decrypt:
+    put:
+      operationId: decryptPayload
+      summary: Decrypt a ciphertext payload stream under an ingress transfer context.
+      description: >
+        Accepts an application/octet-stream encrypted payload and returns a plaintext payload stream.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - name: spipTransferId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Plaintext payload stream.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /audit/events:
+    post:
+      operationId: submitAuditEvent
+      summary: Submit a usage or access audit event.
+      description: >
+        Receives an auditable event describing access, transfer, or policy enforcement outcomes.
+        Audit events are forwarded to governance services and retained according to organisational policy.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuditEvent'
+      responses:
+        '202':
+          description: Audit event accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventAck'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /health:
+    get:
+      operationId: health
+      summary: Liveness endpoint.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Service is live.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /ready:
+    get:
+      operationId: readiness
+      summary: Readiness endpoint.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Service is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          $ref: '#/components/responses/Problem'
+
+  /metrics:
+    get:
+      operationId: metrics
+      summary: Prometheus metrics endpoint.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Metrics in Prometheus exposition format.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    mTLS:
+      type: mutualTLS
+      description: Mutual TLS with client certificate authentication.
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://keycloak.example/realms/data4circ/protocol/openid-connect/token
+          scopes:
+            spip.execute: Invoke enforcement and cryptographic endpoints.
+  parameters:
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      description: Correlation identifier for distributed tracing.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      description: >
+        Idempotency key for POST operations. Reuse of the same key with a semantically equivalent request
+        returns the original response.
+  responses:
+    Problem:
+      description: Error response in application/problem+json format.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  schemas:
+    ProblemDetails:
+      type: object
+      description: Problem Details for HTTP APIs (RFC 9457) with SPIP-specific extension members.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Problem type identifier.
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type.
+        status:
+          type: integer
+          description: HTTP status code.
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence.
+        instance:
+          type: string
+          format: uri
+          description: Identifier for this problem occurrence.
+        correlationId:
+          type: string
+          description: Value of the X-Request-ID header.
+        errorCode:
+          type: string
+          description: Stable SPIP error code.
+        retryable:
+          type: boolean
+          description: Indicates whether a retry with the same parameters is applicable.
+    PolicyEvaluationRequest:
+      type: object
+      required:
+        - requestId
+        - direction
+        - transferProcessId
+        - assetId
+        - contractAgreementId
+        - action
+        - subject
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        direction:
+          $ref: '#/components/schemas/Direction'
+        transferProcessId:
+          type: string
+          description: Dataspace Connector transfer process identifier.
+        assetId:
+          type: string
+          description: Dataspace asset identifier.
+        contractAgreementId:
+          type: string
+          description: Contract agreement identifier.
+        action:
+          type: string
+          description: Requested action, for example READ, TRANSFER, PROCESS.
+        subject:
+          $ref: '#/components/schemas/SubjectContext'
+        resource:
+          $ref: '#/components/schemas/ResourceContext'
+        environment:
+          $ref: '#/components/schemas/EnvironmentContext'
+        policy:
+          $ref: '#/components/schemas/PolicyRef'
+    PolicyEvaluationResponse:
+      type: object
+      required:
+        - decisionId
+        - decision
+        - enforcementSessionId
+        - validUntil
+      properties:
+        decisionId:
+          type: string
+          format: uuid
+        decision:
+          $ref: '#/components/schemas/Decision'
+        enforcementSessionId:
+          type: string
+          format: uuid
+        validUntil:
+          type: string
+          format: date-time
+        obligations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Obligation'
+        policyId:
+          type: string
+          description: Identifier of the policy used for evaluation.
+    SubjectContext:
+      type: object
+      required: [principalType, principalId, organisationId]
+      properties:
+        principalType:
+          type: string
+          enum: [SERVICE, USER]
+        principalId:
+          type: string
+          description: Identifier of the requesting principal.
+        organisationId:
+          type: string
+          description: Identifier of the organisation.
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+          description: Flattened attribute map used for ABAC evaluation.
+    ResourceContext:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          default: ASSET
+        resourceId:
+          type: string
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+    EnvironmentContext:
+      type: object
+      properties:
+        purpose:
+          type: string
+          description: Declared purpose of processing.
+        processingContext:
+          type: string
+          description: Processing context identifier.
+    PolicyRef:
+      type: object
+      properties:
+        policyId:
+          type: string
+        policyJsonLd:
+          type: object
+          description: Policy expressed as IDS policy language in JSON-LD.
+    Obligation:
+      type: object
+      required: [obligationId, type]
+      properties:
+        obligationId:
+          type: string
+        type:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+    EgressPrepareRequest:
+      type: object
+      required:
+        - requestId
+        - decisionId
+        - transferProcessId
+        - assetId
+        - contractAgreementId
+        - contentType
+        - contentLengthBytes
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        decisionId:
+          type: string
+          format: uuid
+        transferProcessId:
+          type: string
+        assetId:
+          type: string
+        contractAgreementId:
+          type: string
+        contentType:
+          type: string
+        contentLengthBytes:
+          type: integer
+          minimum: 0
+          description: Payload length in bytes.
+        checksumSha256:
+          type: string
+          description: Base64-encoded SHA-256 digest of the plaintext payload.
+        encryptionProfile:
+          type: string
+          default: ABE_CP_HYBRID_AES_256_GCM
+    IngressPrepareRequest:
+      type: object
+      required:
+        - requestId
+        - decisionId
+        - transferProcessId
+        - envelope
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        decisionId:
+          type: string
+          format: uuid
+        transferProcessId:
+          type: string
+        envelope:
+          $ref: '#/components/schemas/CryptoEnvelope'
+    PrepareResponse:
+      type: object
+      required:
+        - spipTransferId
+        - envelope
+        - encryptPath
+        - decryptPath
+        - expiresAt
+      properties:
+        spipTransferId:
+          type: string
+          format: uuid
+        envelope:
+          $ref: '#/components/schemas/CryptoEnvelope'
+        encryptPath:
+          type: string
+          description: Relative path of the encrypt endpoint.
+        decryptPath:
+          type: string
+          description: Relative path of the decrypt endpoint.
+        expiresAt:
+          type: string
+          format: date-time
+    CryptoEnvelope:
+      type: object
+      required:
+        - envelopeId
+        - envelopeFormat
+        - contentEncryption
+        - wrappedKey
+      properties:
+        envelopeId:
+          type: string
+          format: uuid
+        envelopeFormat:
+          type: string
+          example: SPIP-ABE-1
+        contentEncryption:
+          type: string
+          example: A256GCM
+        wrappedKey:
+          type: string
+          description: Base64-encoded Attribute-Based Encryption-wrapped content encryption key.
+        keyId:
+          type: string
+          description: Key identifier in the key management service.
+        policyHashSha256:
+          type: string
+          description: Base64-encoded SHA-256 digest of the applied policy artefact.
+    AuditEvent:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - outcome
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [POLICY_EVALUATION, TRANSFER_PREPARE, ENCRYPT, DECRYPT, ACCESS]
+        timestamp:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum: [SUCCESS, FAILURE]
+        transferProcessId:
+          type: string
+        decisionId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+        contractAgreementId:
+          type: string
+        principalId:
+          type: string
+        organisationId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    AuditEventAck:
+      type: object
+      required: [eventId, receivedAt]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        receivedAt:
+          type: string
+          format: date-time
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+    Decision:
+      type: string
+      enum: [PERMIT, DENY]
+    Direction:
+      type: string
+      enum: [EGRESS, INGRESS]
