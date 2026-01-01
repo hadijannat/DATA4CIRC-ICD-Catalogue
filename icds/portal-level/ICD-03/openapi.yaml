@@ -1,0 +1,223 @@
+openapi: 3.1.0
+info:
+  title: ICD-03 DT/DTh Portal SSO Endpoints
+  version: "1.0"
+  description: >
+    OpenAPI schema for DT/DTh Portal SSO endpoints used by the DATA4CIRC Portal deep link and role propagation interface.
+servers:
+  - url: https://{dtDthPortalFqdn}
+    variables:
+      dtDthPortalFqdn:
+        default: <dt-dth-portal-fqdn>
+paths:
+  /sso/v1/launch:
+    get:
+      summary: Launch deep link and initiate OIDC authentication
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Relative DT/DTh route (starts with '/').
+        - name: return_to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Absolute return URL to DATA4CIRC Portal (allow-listed origins).
+        - name: ui_locale
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Locale (BCP 47), e.g., en-GB.
+        - name: login_hint
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional login hint forwarded to Keycloak.
+        - name: tenant
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Tenant identifier used for multi-tenancy routing and realm selection, when multi-tenancy is enabled.
+      responses:
+        "302":
+          description: Redirect to Keycloak authorisation endpoint or target route when session exists.
+        "400":
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /sso/v1/callback:
+    get:
+      summary: OIDC redirect URI endpoint
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Authorisation code.
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Opaque correlation value.
+        - name: session_state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Keycloak session state.
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+          description: OIDC error code.
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+          description: OIDC error description.
+      responses:
+        "302":
+          description: Redirect to target route after session establishment.
+        "400":
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "403":
+          description: Authorisation failure (role validation)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: IdP unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /sso/v1/session:
+    get:
+      summary: Session context
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current user context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserContext"
+        "401":
+          description: Unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "403":
+          description: Forbidden (role missing)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /sso/v1/logout:
+    get:
+      summary: Logout and initiate Keycloak end-session
+      parameters:
+        - name: post_logout_redirect_uri
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Post-logout redirect URI (allow-listed origins).
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque correlation value.
+      responses:
+        "302":
+          description: Redirect to Keycloak end-session endpoint.
+        "400":
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service alive
+  /ready:
+    get:
+      summary: Readiness probe
+      responses:
+        "200":
+          description: Service ready
+        "503":
+          description: Service not ready
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: dt_dth_session
+  schemas:
+    UserContext:
+      type: object
+      required: [user_id, preferred_username, roles, issued_at, expires_at]
+      properties:
+        user_id:
+          type: string
+        preferred_username:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+        issued_at:
+          type: integer
+        expires_at:
+          type: integer
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        trace_id:
+          type: string
