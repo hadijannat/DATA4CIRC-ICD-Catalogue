@@ -1,0 +1,260 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-12 AAS API Profile
+  version: "1.0"
+  description: >
+    OpenAPI profile of the IDTA Asset Administration Shell (AAS) Part 2 HTTP/REST API endpoints
+    used for DPP/AAS Application <-> DT/DTh Application synchronisation in ICD-12.
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: aas.example.data4circ.eu
+security:
+  - oauth2: [aas.read, aas.write]
+
+paths:
+  /lookup/shells:
+    get:
+      summary: Resolve AAS identifiers by asset identifiers (Basic Discovery)
+      parameters:
+        - name: assetids
+          in: query
+          required: true
+          description: List of asset identifiers (URI/URN), URL-encoded.
+          schema:
+            type: array
+            items: { type: string }
+          style: form
+          explode: true
+      responses:
+        "200":
+          description: List of base64url-encoded AAS identifiers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Problem" }
+
+  /shell-descriptors:
+    get:
+      summary: List AAS descriptors (Registry)
+      responses:
+        "200":
+          description: Descriptor list (schema simplified for ICD-12 profile).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Problem" }
+
+  /shell-descriptors/{aas-identifier}:
+    get:
+      summary: Get AAS descriptor by identifier (Registry)
+      parameters:
+        - $ref: "#/components/parameters/aas-identifier"
+      responses:
+        "200":
+          description: Descriptor (schema simplified for ICD-12 profile).
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /shells/{aas-identifier}:
+    get:
+      summary: Get AssetAdministrationShell by identifier (Repository)
+      parameters:
+        - $ref: "#/components/parameters/aas-identifier"
+      responses:
+        "200":
+          description: AssetAdministrationShell JSON representation (schema simplified for ICD-12 profile).
+          headers:
+            ETag:
+              schema: { type: string }
+              description: Entity tag for optimistic concurrency.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AasShell" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /shells/{aas-identifier}/submodel-refs:
+    get:
+      summary: Get Submodel references for an AAS (Repository)
+      parameters:
+        - $ref: "#/components/parameters/aas-identifier"
+      responses:
+        "200":
+          description: List of Submodel references.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Reference" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /shells/{aas-identifier}/submodels/{submodel-identifier}:
+    get:
+      summary: Get Submodel by identifier (Repository)
+      parameters:
+        - $ref: "#/components/parameters/aas-identifier"
+        - $ref: "#/components/parameters/submodel-identifier"
+      responses:
+        "200":
+          description: Submodel JSON representation (schema simplified for ICD-12 profile).
+          headers:
+            ETag:
+              schema: { type: string }
+              description: Entity tag for optimistic concurrency.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Submodel" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /shells/{aas-identifier}/submodels/{submodel-identifier}/submodel-elements/{idShortPath}:
+    get:
+      summary: Get SubmodelElement by idShortPath
+      parameters:
+        - $ref: "#/components/parameters/aas-identifier"
+        - $ref: "#/components/parameters/submodel-identifier"
+        - $ref: "#/components/parameters/idShortPath"
+      responses:
+        "200":
+          description: SubmodelElement JSON representation (schema simplified for ICD-12 profile).
+          headers:
+            ETag:
+              schema: { type: string }
+              description: Entity tag for optimistic concurrency.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmodelElement" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /shells/{aas-identifier}/submodels/{submodel-identifier}/submodel-elements/{idShortPath}/$value:
+    patch:
+      summary: Update SubmodelElement value (value-only update)
+      parameters:
+        - $ref: "#/components/parameters/aas-identifier"
+        - $ref: "#/components/parameters/submodel-identifier"
+        - $ref: "#/components/parameters/idShortPath"
+        - name: If-Match
+          in: header
+          required: false
+          description: ETag value for optimistic concurrency control.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: [string, number, boolean, object, array, "null"] }
+      responses:
+        "204":
+          description: Updated successfully.
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorised" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://idp.example.data4circ.eu/realms/data4circ/protocol/openid-connect/token
+          scopes:
+            aas.read: Read AAS resources
+            aas.write: Update mapping SubmodelElements
+            aas.admin: Administrative provisioning
+
+  parameters:
+    aas-identifier:
+      name: aas-identifier
+      in: path
+      required: true
+      description: Base64url-encoded AAS identifier.
+      schema: { type: string }
+    submodel-identifier:
+      name: submodel-identifier
+      in: path
+      required: true
+      description: Base64url-encoded Submodel identifier.
+      schema: { type: string }
+    idShortPath:
+      name: idShortPath
+      in: path
+      required: true
+      description: URL-encoded idShortPath of the SubmodelElement.
+      schema: { type: string }
+
+  schemas:
+    AasShell:
+      type: object
+      additionalProperties: true
+      description: AssetAdministrationShell (schema profile; full schema defined by IDTA metamodel).
+    Submodel:
+      type: object
+      additionalProperties: true
+      description: Submodel (schema profile; full schema defined by IDTA metamodel).
+    SubmodelElement:
+      type: object
+      additionalProperties: true
+      description: SubmodelElement (schema profile; full schema defined by IDTA metamodel).
+    Reference:
+      type: object
+      additionalProperties: true
+      description: Reference to a Submodel or other AAS element.
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+  responses:
+    Problem:
+      description: RFC 9457 Problem Details.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Unauthorised:
+      description: Authentication required or token invalid.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Forbidden:
+      description: Insufficient permissions.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Conflict:
+      description: Concurrency conflict (ETag mismatch).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }

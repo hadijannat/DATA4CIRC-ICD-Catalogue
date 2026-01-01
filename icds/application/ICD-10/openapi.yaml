@@ -1,0 +1,596 @@
+openapi: 3.1.1
+info:
+  title: DATA4CIRC ICD-10 - LCA Portal <-> LCA Application API
+  version: "1.0.0"
+  description: |
+    REST API contract for the interface between the Life Cycle Assessment Portal (LCA Portal)
+    and the Life Cycle Assessment Application (LCA Application) within the DATA4CIRC platform.
+
+    The API uses asynchronous job orchestration for LCA computations. Job submission returns
+    202 Accepted and an assessment identifier. Job status and results are retrieved via
+    polling endpoints.
+
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host:
+        default: <lca-application-hostname>
+
+tags:
+  - name: catalogue
+    description: Product and template catalogue operations
+  - name: assessments
+    description: LCA assessment orchestration operations
+  - name: monitoring
+    description: Health and readiness probes
+
+security:
+  - oauth2: [lca:read, lca:write]
+
+paths:
+  /products:
+    get:
+      tags: [catalogue]
+      summary: List selectable products
+      operationId: listProducts
+      parameters:
+        - in: query
+          name: page
+          description: Zero-based page index.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: size
+          description: Page size.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Product list response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /lca/templates:
+    get:
+      tags: [catalogue]
+      summary: List predefined LCA templates
+      operationId: listTemplates
+      parameters:
+        - in: query
+          name: category
+          description: Optional category filter.
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        "200":
+          description: Template list response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /lca/databases:
+    get:
+      tags: [catalogue]
+      summary: List available LCA databases
+      operationId: listDatabases
+      responses:
+        "200":
+          description: Database list response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatabaseListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /lca/assessments:
+    post:
+      tags: [assessments]
+      summary: Submit an LCA assessment job
+      operationId: createAssessment
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          description: UUID used to guarantee idempotent job creation.
+          schema:
+            $ref: "#/components/schemas/Uuid"
+        - in: header
+          name: X-Request-ID
+          required: false
+          description: Client-supplied request correlation identifier.
+          schema:
+            type: string
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LCAAssessmentRequest"
+      responses:
+        "202":
+          description: Job accepted for asynchronous processing
+          headers:
+            Location:
+              description: Resource location of the created assessment.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LCAAssessmentAcceptedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /lca/assessments/{assessmentId}:
+    get:
+      tags: [assessments]
+      summary: Retrieve assessment job status
+      operationId: getAssessmentStatus
+      parameters:
+        - in: path
+          name: assessmentId
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: Status response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LCAAssessmentStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /lca/assessments/{assessmentId}/results:
+    get:
+      tags: [assessments]
+      summary: Retrieve assessment results
+      operationId: getAssessmentResults
+      parameters:
+        - in: path
+          name: assessmentId
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: Result response (terminal state required)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LCAAssessmentResult"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Job not in COMPLETED state
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /lca/assessments/{assessmentId}/retry:
+    post:
+      tags: [assessments]
+      summary: Retry or resume an interrupted assessment
+      operationId: retryAssessment
+      parameters:
+        - in: path
+          name: assessmentId
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "202":
+          description: Retry accepted for asynchronous processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LCAAssessmentAcceptedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorised"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /health:
+    get:
+      tags: [monitoring]
+      summary: Liveness probe
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: UP
+                required: [status]
+
+  /ready:
+    get:
+      tags: [monitoring]
+      summary: Readiness probe
+      operationId: ready
+      security: []
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: READY
+                required: [status]
+        "503":
+          description: Service not ready
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OAuth 2.0 Authorization Code flow with OpenID Connect.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://<keycloak-host>/realms/data4circ/protocol/openid-connect/auth
+          tokenUrl: https://<keycloak-host>/realms/data4circ/protocol/openid-connect/token
+          scopes:
+            lca:read: Read access to catalogue and results
+            lca:write: Create and retry assessments
+
+  responses:
+    BadRequest:
+      description: Bad request (validation errors)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Unauthorised:
+      description: Authentication required or token invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Forbidden:
+      description: Authorisation failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Conflict:
+      description: Conflict (idempotency mismatch or illegal state)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+      examples:
+        - 4f1c2a77-6a3f-4b71-8d0e-6e2f4d3c1b9a
+
+    Product:
+      type: object
+      properties:
+        productId:
+          $ref: "#/components/schemas/Uuid"
+        productName:
+          type: string
+          maxLength: 256
+        category:
+          type: string
+          maxLength: 64
+        dppReference:
+          type: string
+          description: Optional reference to a DPP/AAS resource.
+      required: [productId, productName]
+
+    ProductListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          minimum: 0
+      required: [items, page, size, totalItems]
+
+    LCATemplate:
+      type: object
+      properties:
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          maxLength: 256
+        category:
+          type: string
+          maxLength: 64
+        version:
+          type: string
+          maxLength: 32
+        description:
+          type: string
+      required: [templateId, name, category, version]
+
+    TemplateListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LCATemplate"
+      required: [items]
+
+    DatabaseRef:
+      type: object
+      properties:
+        databaseId:
+          type: string
+          maxLength: 64
+        name:
+          type: string
+          maxLength: 256
+        version:
+          type: string
+          maxLength: 32
+      required: [databaseId, name, version]
+
+    DatabaseListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DatabaseRef"
+      required: [items]
+
+    FunctionalUnit:
+      type: object
+      properties:
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+        unit:
+          type: string
+          description: UCUM unit string.
+          maxLength: 32
+      required: [quantity, unit]
+
+    DatabaseSelection:
+      type: object
+      properties:
+        databaseId:
+          type: string
+          maxLength: 64
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+      required: [databaseId, priority]
+
+    GoalAndScope:
+      type: object
+      properties:
+        goal:
+          type: string
+          maxLength: 2048
+        scope:
+          type: string
+          maxLength: 4096
+        functionalUnit:
+          $ref: "#/components/schemas/FunctionalUnit"
+        impactMethod:
+          type: string
+          maxLength: 64
+          examples: [EF_3_1]
+        databaseSelection:
+          type: array
+          items:
+            $ref: "#/components/schemas/DatabaseSelection"
+      required: [goal, scope, functionalUnit, impactMethod]
+
+    LifeCycleModel:
+      type: string
+      enum: [CRADLE_TO_GATE, CRADLE_TO_GRAVE, GATE_TO_GATE, CRADLE_TO_CRADLE]
+
+    LCAAssessmentRequest:
+      type: object
+      properties:
+        assessmentName:
+          type: string
+          pattern: "^[A-Za-z0-9_\\-]{1,64}$"
+        productId:
+          $ref: "#/components/schemas/Uuid"
+        templateId:
+          $ref: "#/components/schemas/Uuid"
+        goalAndScope:
+          $ref: "#/components/schemas/GoalAndScope"
+        lifeCycleModel:
+          $ref: "#/components/schemas/LifeCycleModel"
+        aiAssistanceEnabled:
+          type: boolean
+          default: true
+        parameters:
+          type: object
+          additionalProperties: true
+      required: [assessmentName, productId, goalAndScope, lifeCycleModel, aiAssistanceEnabled]
+
+    JobStatus:
+      type: string
+      enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
+
+    LCAAssessmentAcceptedResponse:
+      type: object
+      properties:
+        assessmentId:
+          $ref: "#/components/schemas/Uuid"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        submittedAt:
+          type: string
+          format: date-time
+        links:
+          type: object
+          properties:
+            self:
+              type: string
+            results:
+              type: string
+            retry:
+              type: string
+          required: [self, results, retry]
+      required: [assessmentId, status, submittedAt, links]
+
+    LCAAssessmentStatusResponse:
+      type: object
+      properties:
+        assessmentId:
+          $ref: "#/components/schemas/Uuid"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        submittedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          items:
+            type: string
+      required: [assessmentId, status, submittedAt]
+
+    ImpactResult:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          maxLength: 128
+        categoryName:
+          type: string
+          maxLength: 256
+        value:
+          type: number
+        unit:
+          type: string
+          maxLength: 64
+      required: [categoryId, categoryName, value, unit]
+
+    LCAAssessmentResult:
+      type: object
+      properties:
+        assessmentId:
+          $ref: "#/components/schemas/Uuid"
+        impactResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImpactResult"
+        breakdown:
+          type: object
+          additionalProperties: true
+        reportSummary:
+          type: string
+        reportLink:
+          type: string
+          format: uri
+      required: [assessmentId, impactResults]
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457 Problem Details for HTTP APIs.
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errors:
+          type: object
+          additionalProperties: true
+      required: [type, title, status]

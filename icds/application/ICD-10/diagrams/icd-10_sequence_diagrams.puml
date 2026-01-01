@@ -1,0 +1,40 @@
+@startuml
+title ICD-10 - LCA Assessment Submission and Result Retrieval
+
+actor User
+participant "LCA Portal" as Portal
+participant "Keycloak (OIDC)" as IdP
+participant "LCA Application" as LCA
+
+User -> Portal: Configure assessment parameters
+Portal -> IdP: OIDC Authorisation Code + PKCE
+IdP --> Portal: Access token (JWT)
+
+Portal -> LCA: POST /api/v1/lca/assessments\nAuthorization: Bearer <JWT>\nIdempotency-Key: <UUID>
+LCA --> Portal: 202 Accepted\n{assessmentId, status, links}
+
+loop Poll status until terminal state
+  Portal -> LCA: GET /api/v1/lca/assessments/{assessmentId}
+  LCA --> Portal: 200 OK\n{status, progress, timestamps}
+end
+
+Portal -> LCA: GET /api/v1/lca/assessments/{assessmentId}/results
+LCA --> Portal: 200 OK\n{impactResults[], reportSummary, reportLink}
+
+Portal -> User: Render charts and tables
+@enduml
+
+@startuml
+title ICD-10 - Retry/Resume Flow
+
+participant "LCA Portal" as Portal
+participant "LCA Application" as LCA
+
+Portal -> LCA: POST /api/v1/lca/assessments/{assessmentId}/retry\nAuthorization: Bearer <JWT>\nIdempotency-Key: <UUID>
+
+alt Allowed state (FAILED or INTERRUPTED)
+  LCA --> Portal: 202 Accepted\n{assessmentId, status=QUEUED}
+else Disallowed state (RUNNING)
+  LCA --> Portal: 409 Conflict\napplication/problem+json
+end
+@enduml

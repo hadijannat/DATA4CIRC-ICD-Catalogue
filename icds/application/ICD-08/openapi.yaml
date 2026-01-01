@@ -1,0 +1,395 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-08 DPP/AAS Portal - DPP/AAS Application API
+  version: "1.0"
+  description: >
+    Subset of the IDTA AAS Part 2 API used for the DATA4CIRC DPP/AAS Portal integration.
+servers:
+  - url: https://{host}/api/v3.0
+    variables:
+      host:
+        default: dpp-aas-application.example
+security:
+  - OIDC: []
+paths:
+  /description:
+    get:
+      summary: Service description
+      security: []
+      responses:
+        "200":
+          description: ServiceDescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceDescription"
+  /lookup/shells:
+    get:
+      summary: Resolve shell identifiers by assetIds
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/assetids"
+        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Result of shell identifiers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultStringArray"
+        "400":
+          $ref: "#/components/responses/Problem"
+  /shells:
+    get:
+      summary: List AssetAdministrationShells
+      parameters:
+        - $ref: "#/components/parameters/assetids"
+        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Result of shells
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultShellArray"
+        "401":
+          $ref: "#/components/responses/Problem"
+  /shells/{aasIdentifier}:
+    get:
+      summary: Get AssetAdministrationShell by identifier
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/aasIdentifier"
+      responses:
+        "200":
+          description: Shell
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetAdministrationShell"
+        "404":
+          $ref: "#/components/responses/Problem"
+  /shells/{aasIdentifier}/aas/submodel-refs:
+    get:
+      summary: Get submodel references for a shell
+      parameters:
+        - $ref: "#/components/parameters/aasIdentifier"
+        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Result of references
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultReferenceArray"
+  /submodels/{submodelIdentifier}:
+    get:
+      summary: Get Submodel by identifier
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+      responses:
+        "200":
+          description: Submodel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submodel"
+        "404":
+          $ref: "#/components/responses/Problem"
+    patch:
+      summary: Patch Submodel by identifier (JSON Patch)
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+        - $ref: "#/components/parameters/ifMatch"
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: "#/components/schemas/JsonPatch"
+      responses:
+        "204":
+          description: Patched
+        "409":
+          $ref: "#/components/responses/Problem"
+  /submodels/{submodelIdentifier}/submodel:
+    get:
+      summary: Get Submodel element tree
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+      responses:
+        "200":
+          description: Submodel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submodel"
+  /submodels/{submodelIdentifier}/submodel/$value:
+    patch:
+      summary: Patch Submodel value-only representation
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+        - $ref: "#/components/parameters/ifMatch"
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: "#/components/schemas/JsonPatch"
+      responses:
+        "204":
+          description: Patched
+        "422":
+          $ref: "#/components/responses/Problem"
+  /submodels/{submodelIdentifier}/submodel/submodel-elements/{idShortPath}:
+    get:
+      summary: Get submodel element by idShortPath
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+        - $ref: "#/components/parameters/idShortPath"
+      responses:
+        "200":
+          description: SubmodelElement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmodelElement"
+  /submodels/{submodelIdentifier}/submodel/submodel-elements/{idShortPath}/$value:
+    get:
+      summary: Get submodel element value-only representation
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+        - $ref: "#/components/parameters/idShortPath"
+      responses:
+        "200":
+          description: Value
+          content:
+            application/json:
+              schema:
+                type: object
+  /submodels/{submodelIdentifier}/submodel/submodel-elements/{idShortPath}/attachment:
+    get:
+      summary: Download file attachment
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+        - $ref: "#/components/parameters/idShortPath"
+      responses:
+        "200":
+          description: Attachment binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      summary: Upload file attachment
+      parameters:
+        - $ref: "#/components/parameters/submodelIdentifier"
+        - $ref: "#/components/parameters/idShortPath"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: Stored
+  /packages/{packageId}:
+    get:
+      summary: Download AASX package by packageId
+      parameters:
+        - $ref: "#/components/parameters/packageId"
+      responses:
+        "200":
+          description: AASX package
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+components:
+  securitySchemes:
+    OIDC:
+      type: openIdConnect
+      openIdConnectUrl: https://{idp-host}/realms/{realm}/.well-known/openid-configuration
+  parameters:
+    aasIdentifier:
+      name: aasIdentifier
+      in: path
+      required: true
+      description: base64url-encoded AAS identifier
+      schema:
+        type: string
+    submodelIdentifier:
+      name: submodelIdentifier
+      in: path
+      required: true
+      description: base64url-encoded submodel identifier
+      schema:
+        type: string
+    idShortPath:
+      name: idShortPath
+      in: path
+      required: true
+      description: URL-encoded idShortPath
+      schema:
+        type: string
+    packageId:
+      name: packageId
+      in: path
+      required: true
+      description: base64url-encoded package identifier
+      schema:
+        type: string
+    assetids:
+      name: assetids
+      in: query
+      required: false
+      description: base64url-encoded JSON array of SpecificAssetId objects
+      schema:
+        type: string
+    cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+    ifMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+  responses:
+    Problem:
+      description: ProblemDetails
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+  schemas:
+    ServiceDescription:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            type: object
+      additionalProperties: true
+    ResultStringArray:
+      type: object
+      properties:
+        result:
+          type: array
+          items:
+            type: string
+      additionalProperties: true
+    ResultShellArray:
+      type: object
+      properties:
+        result:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetAdministrationShell"
+      additionalProperties: true
+    ResultReferenceArray:
+      type: object
+      properties:
+        result:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reference"
+      additionalProperties: true
+    AssetAdministrationShell:
+      type: object
+      properties:
+        id:
+          type: string
+        idShort:
+          type: string
+        assetInformation:
+          type: object
+      additionalProperties: true
+    Submodel:
+      type: object
+      properties:
+        id:
+          type: string
+        idShort:
+          type: string
+        semanticId:
+          $ref: "#/components/schemas/Reference"
+        submodelElements:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubmodelElement"
+      additionalProperties: true
+    SubmodelElement:
+      type: object
+      properties:
+        idShort:
+          type: string
+        modelType:
+          type: string
+      additionalProperties: true
+    Reference:
+      type: object
+      additionalProperties: true
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        correlationId:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+              code:
+                type: string
+      additionalProperties: true
+    JsonPatch:
+      type: array
+      items:
+        type: object
+        required: [op, path]
+        properties:
+          op:
+            type: string
+          path:
+            type: string
+          value: {}

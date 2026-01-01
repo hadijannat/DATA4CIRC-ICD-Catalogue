@@ -1,0 +1,389 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-11 BOM to LCI Transfer API
+  version: 1.0.0
+  description: >
+    Interface contract between DPP/AAS Application (provider) and LCA Application (consumer)
+    for Bill of Materials (BOM) retrieval and Life Cycle Inventory (LCI) dataset generation.
+servers:
+  - url: https://dpp-aas-app.data4circ.eu/api/v1
+security:
+  - oauth2ClientCredentials: []
+paths:
+  /products/{productId}/bom:
+    get:
+      operationId: getBom
+      summary: Retrieve BOM snapshot for a product.
+      tags: [BOM]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 128 }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: BOM snapshot.
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bom" }
+        "304":
+          description: Not modified.
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+  /lca/inventory-jobs:
+    post:
+      operationId: createInventoryJob
+      summary: Create inventory dataset generation job.
+      tags: [Inventory]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InventoryJobCreateRequest" }
+      responses:
+        "202":
+          description: Job accepted.
+          headers:
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryJob" }
+        "400":
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "422":
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "503":
+          $ref: "#/components/responses/Problem503"
+  /lca/inventory-jobs/{jobId}:
+    get:
+      operationId: getInventoryJob
+      summary: Retrieve inventory job status.
+      tags: [Inventory]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Job status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryJob" }
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+    delete:
+      operationId: cancelInventoryJob
+      summary: Cancel an inventory job.
+      tags: [Inventory]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Cancelled.
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "409":
+          $ref: "#/components/responses/Problem409"
+  /lca/inventory-jobs/{jobId}/result:
+    get:
+      operationId: getInventoryResult
+      summary: Download inventory dataset for a completed job.
+      tags: [Inventory]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Inventory dataset.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InventoryDataset" }
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "409":
+          $ref: "#/components/responses/Problem409"
+  /health:
+    get:
+      operationId: health
+      summary: Service health check.
+      tags: [Operations]
+      security: []
+      responses:
+        "200":
+          description: Health status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+  /ready:
+    get:
+      operationId: ready
+      summary: Readiness check.
+      tags: [Operations]
+      security: []
+      responses:
+        "200":
+          description: Ready.
+        "503":
+          $ref: "#/components/responses/Problem503"
+  /metrics:
+    get:
+      operationId: metrics
+      summary: Prometheus metrics endpoint.
+      tags: [Operations]
+      security: []
+      responses:
+        "200":
+          description: Metrics.
+          content:
+            text/plain:
+              schema: { type: string }
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://sso.data4circ.eu/realms/data4circ/protocol/openid-connect/token
+          scopes: {}
+  responses:
+    Problem400:
+      description: Bad request.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem401:
+      description: Unauthorised.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem403:
+      description: Forbidden.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem404:
+      description: Not found.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem409:
+      description: Conflict.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem422:
+      description: Unprocessable entity (validation errors).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem429:
+      description: Too many requests.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    Problem503:
+      description: Service unavailable.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+  schemas:
+    Bom:
+      type: object
+      required: [productId, bomId, bomRevision, etag, generatedAt, items]
+      properties:
+        productId: { type: string, maxLength: 128 }
+        bomId: { type: string }
+        bomRevision: { type: string }
+        etag: { type: string }
+        generatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/BomItem" }
+    BomItem:
+      type: object
+      required: [itemId, componentId, componentName, quantity, unit, material]
+      properties:
+        itemId: { type: string }
+        parentItemId: { type: string, nullable: true }
+        componentId: { type: string }
+        componentName: { type: string }
+        quantity: { type: number }
+        unit: { type: string }
+        mass: { type: number, nullable: true }
+        material: { $ref: "#/components/schemas/Material" }
+    Material:
+      type: object
+      required: [classificationSystem, classificationId]
+      properties:
+        classificationSystem: { type: string }
+        classificationId: { type: string }
+    InventoryJobCreateRequest:
+      type: object
+      required: [productId, goalScope, functionalUnit, lifeCycleModel]
+      properties:
+        productId: { type: string }
+        bomSnapshot:
+          type: object
+          properties:
+            bomId: { type: string }
+            bomRevision: { type: string }
+            etag: { type: string }
+        goalScope:
+          type: object
+          required: [goal, scope]
+          properties:
+            goal: { type: string }
+            scope: { type: string }
+            impactMethod: { type: string, nullable: true }
+            geography: { type: string, nullable: true }
+        functionalUnit:
+          type: object
+          required: [quantity, unit]
+          properties:
+            quantity: { type: number }
+            unit: { type: string }
+            description: { type: string, nullable: true }
+        lifeCycleModel:
+          type: string
+          enum: [CRADLE_TO_GATE, CRADLE_TO_GRAVE, GATE_TO_GATE]
+        mappingProfileId: { type: string, nullable: true }
+    InventoryJob:
+      type: object
+      required: [jobId, productId, status, submittedAt, progress]
+      properties:
+        jobId: { type: string, format: uuid }
+        productId: { type: string }
+        status:
+          type: string
+          enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        submittedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        resultUrl: { type: string, nullable: true }
+        error: { $ref: "#/components/schemas/ProblemDetails" }
+    InventoryDataset:
+      type: object
+      required: [datasetId, productId, functionalUnit, flows, metadata]
+      properties:
+        datasetId: { type: string, format: uuid }
+        productId: { type: string }
+        bomRevision: { type: string, nullable: true }
+        functionalUnit:
+          $ref: "#/components/schemas/FunctionalUnit"
+        flows:
+          type: array
+          items: { $ref: "#/components/schemas/InventoryFlow" }
+        metadata:
+          type: object
+          properties:
+            createdAt: { type: string, format: date-time }
+            mappingProfileId: { type: string }
+            mappingVersion: { type: string }
+    FunctionalUnit:
+      type: object
+      required: [quantity, unit]
+      properties:
+        quantity: { type: number }
+        unit: { type: string }
+        description: { type: string, nullable: true }
+    InventoryFlow:
+      type: object
+      required: [flowName, amount, unit, direction, flowType]
+      properties:
+        flowId: { type: string, nullable: true }
+        flowName: { type: string }
+        flowType:
+          type: string
+          enum: [ELEMENTARY_INPUT, ELEMENTARY_OUTPUT, PRODUCT_INPUT, PRODUCT_OUTPUT, WASTE_OUTPUT]
+        direction:
+          type: string
+          enum: [INPUT, OUTPUT]
+        stage:
+          type: string
+          nullable: true
+        compartment: { type: string, nullable: true }
+        amount: { type: number }
+        unit: { type: string }
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [UP, DOWN] }
+        version: { type: string, nullable: true }
+        dependencies:
+          type: object
+          additionalProperties: { type: string }
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string, nullable: true }
+        instance: { type: string, nullable: true }
+        errorCode: { type: string, nullable: true }
+        traceId: { type: string, nullable: true }
+        retryable: { type: boolean, nullable: true }
+        violations:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }

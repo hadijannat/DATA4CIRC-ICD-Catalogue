@@ -1,0 +1,1015 @@
+openapi: 3.1.0
+info:
+  title: ICD-13 DT/DTh to LCA Data Exchange API
+  version: "1.0"
+  description: >
+    Application interface for secure exchange of simulation outputs and system state information
+    between the DT/DTh Application (provider) and the LCA Application (consumer).
+servers:
+  - url: https://<dt-dth-hostname>/api/v1
+    description: DT/DTh API base URL (deployment-specific)
+security:
+  - oauth2ClientCredentials: []
+
+tags:
+  - name: simulations
+    description: Simulation job creation, status, and result retrieval
+  - name: states
+    description: System state snapshot and time series retrieval
+  - name: metadata
+    description: Metric catalogue and semantic metadata
+  - name: webhooks
+    description: Webhook subscription management
+  - name: health
+    description: Health and metrics endpoints
+
+paths:
+  /simulations/jobs:
+    post:
+      tags: [simulations]
+      operationId: createSimulationJob
+      summary: Create simulation output extraction job
+      description: >
+        Creates an asynchronous job producing simulation outputs in LCI-oriented format.
+        Idempotency is supported via the Idempotency-Key header.
+      security:
+        - oauth2ClientCredentials:
+            - icd13.simulation.write
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulationJobRequest"
+      responses:
+        "202":
+          description: Job created
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationJobCreated"
+        "400":
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "409":
+          $ref: "#/components/responses/Problem409"
+        "422":
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /simulations/jobs/{jobId}:
+    get:
+      tags: [simulations]
+      operationId: getSimulationJob
+      summary: Retrieve simulation job status
+      security:
+        - oauth2ClientCredentials:
+            - icd13.simulation.read
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job status
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationJobStatus"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /simulations/jobs/{jobId}/result:
+    get:
+      tags: [simulations]
+      operationId: getSimulationResult
+      summary: Retrieve simulation result
+      description: >
+        Returns the simulation result when job status equals COMPLETED. Returns 202 Accepted when the result is not yet available.
+      security:
+        - oauth2ClientCredentials:
+            - icd13.simulation.read
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Completed simulation result
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResult"
+        "202":
+          description: Result not yet available
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationJobStatus"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /states/snapshots:
+    get:
+      tags: [states]
+      operationId: listSystemStateSnapshots
+      summary: List system state snapshots
+      security:
+        - oauth2ClientCredentials:
+            - icd13.state.read
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/AssetId"
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Granularity"
+        - $ref: "#/components/parameters/MetricIds"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Snapshot list
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemStateSnapshotPage"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "422":
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /states/snapshots/{snapshotId}:
+    get:
+      tags: [states]
+      operationId: getSystemStateSnapshot
+      summary: Get system state snapshot
+      security:
+        - oauth2ClientCredentials:
+            - icd13.state.read
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/SnapshotId"
+      responses:
+        "200":
+          description: Snapshot resource
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemStateSnapshot"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /metadata/metrics:
+    get:
+      tags: [metadata]
+      operationId: listMetrics
+      summary: List supported metrics
+      security:
+        - oauth2ClientCredentials:
+            - icd13.metadata.read
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Metric definitions
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MetricDefinition"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /webhooks/subscriptions:
+    post:
+      tags: [webhooks]
+      operationId: createWebhookSubscription
+      summary: Create webhook subscription
+      description: >
+        Registers a webhook callback for job state transition events. The callback is invoked asynchronously using CloudEvents v1.0.
+      security:
+        - oauth2ClientCredentials:
+            - icd13.webhook.manage
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSubscriptionRequest"
+      responses:
+        "201":
+          description: Subscription created
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSubscription"
+        "400":
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "422":
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+      callbacks:
+        simulationJobStateChanged:
+          '{$request.body#/callbackUrl}':
+            post:
+              summary: Simulation job state change event (callback)
+              description: >
+                Callback delivering a CloudEvents v1.0 event indicating a job state transition to COMPLETED or FAILED.
+              parameters:
+                - $ref: "#/components/parameters/XRequestId"
+                - $ref: "#/components/parameters/WebhookSignature"
+              requestBody:
+                required: true
+                content:
+                  application/cloudevents+json:
+                    schema:
+                      $ref: "#/components/schemas/SimulationJobStateChangedEvent"
+              responses:
+                "204":
+                  description: Event acknowledged
+
+  /webhooks/subscriptions/{subscriptionId}:
+    delete:
+      tags: [webhooks]
+      operationId: deleteWebhookSubscription
+      summary: Delete webhook subscription
+      security:
+        - oauth2ClientCredentials:
+            - icd13.webhook.manage
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "204":
+          description: Subscription deleted
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "403":
+          $ref: "#/components/responses/Problem403"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+
+  /health/live:
+    get:
+      tags: [health]
+      operationId: livenessProbe
+      security: []
+      responses:
+        "200":
+          description: Service is live
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: readinessProbe
+      security: []
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Service is not ready
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /metrics:
+    get:
+      tags: [health]
+      operationId: metricsEndpoint
+      security: []
+      responses:
+        "200":
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://<keycloak-host>/realms/<realm>/protocol/openid-connect/token
+          scopes:
+            icd13.simulation.read: Read simulation jobs and results
+            icd13.simulation.write: Create simulation jobs
+            icd13.state.read: Read system state snapshots
+            icd13.metadata.read: Read metric definitions
+            icd13.webhook.manage: Manage webhook subscriptions
+
+  parameters:
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Trace correlation identifier.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Idempotency key for POST operations.
+    WebhookSignature:
+      name: X-DATA4CIRC-Signature
+      in: header
+      required: true
+      schema:
+        type: string
+      description: HMAC-SHA256 signature computed over the request body using the subscription secret.
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Simulation job identifier.
+    SnapshotId:
+      name: snapshotId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Snapshot identifier.
+    SubscriptionId:
+      name: subscriptionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Webhook subscription identifier.
+    AssetId:
+      name: assetId
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Asset or system identifier.
+    From:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+      description: Inclusive start timestamp.
+    To:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+      description: Exclusive end timestamp.
+    Granularity:
+      name: granularity
+      in: query
+      required: false
+      schema:
+        type: string
+      description: ISO 8601 duration for aggregation (e.g., PT1M, PT1H).
+    MetricIds:
+      name: metricIds
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: false
+      description: Optional metric identifier filter (comma-separated).
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
+      description: Pagination size.
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Pagination cursor.
+
+  headers:
+    XRequestId:
+      schema:
+        type: string
+        format: uuid
+      description: Trace correlation identifier.
+
+  responses:
+    Problem400:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem401:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem403:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem404:
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem409:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem422:
+      description: Unprocessable Entity
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem429:
+      description: Too Many Requests
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem500:
+      description: Internal Server Error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Problem503:
+      description: Service Unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+  schemas:
+    SimulationJobRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - scenarioId
+        - assetId
+        - productId
+        - timeRange
+        - requestedMetrics
+      properties:
+        scenarioId:
+          type: string
+        assetId:
+          type: string
+        productId:
+          type: string
+        timeRange:
+          $ref: "#/components/schemas/TimeRange"
+        granularity:
+          type: string
+          description: ISO 8601 duration (e.g., PT1M).
+        requestedMetrics:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        aggregation:
+          type: string
+          enum: [SUM, AVG, MIN, MAX]
+          default: SUM
+        webhookSubscriptionId:
+          type: string
+          format: uuid
+
+    TimeRange:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+
+    SimulationJobCreated:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - status
+        - createdAt
+        - links
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [QUEUED]
+        createdAt:
+          type: string
+          format: date-time
+        links:
+          $ref: "#/components/schemas/Links"
+
+    Links:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - result
+      properties:
+        status:
+          type: string
+          format: uri
+        result:
+          type: string
+          format: uri
+
+    SimulationJobStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - status
+        - createdAt
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, EXPIRED]
+        progress:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        error:
+          $ref: "#/components/schemas/ProblemDetails"
+
+    SimulationResult:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - scenarioId
+        - assetId
+        - productId
+        - generatedAt
+        - lciFlows
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        scenarioId:
+          type: string
+        assetId:
+          type: string
+        productId:
+          type: string
+        timeRange:
+          $ref: "#/components/schemas/TimeRange"
+        granularity:
+          type: string
+        aggregation:
+          type: string
+          enum: [SUM, AVG, MIN, MAX]
+        lciFlows:
+          type: array
+          items:
+            $ref: "#/components/schemas/LCIFlow"
+        aggregatedMetrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricValue"
+        timeSeries:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+        generatedAt:
+          type: string
+          format: date-time
+
+    Quantity:
+      type: object
+      additionalProperties: false
+      required:
+        - value
+        - unit
+        - quantityKind
+      properties:
+        value:
+          type: number
+        unit:
+          type: string
+          format: uri
+          description: QUDT unit URI.
+        quantityKind:
+          type: string
+          format: uri
+          description: QUDT quantityKind URI.
+
+    LCIFlow:
+      type: object
+      additionalProperties: false
+      required:
+        - flowId
+        - flowType
+        - direction
+        - amount
+      properties:
+        flowId:
+          type: string
+        flowName:
+          type: string
+        flowType:
+          type: string
+          enum: [MATERIAL, ENERGY, WATER, WASTE, EMISSION, OTHER]
+        direction:
+          type: string
+          enum: [INPUT, OUTPUT]
+        amount:
+          $ref: "#/components/schemas/Quantity"
+        location:
+          type: string
+        category:
+          type: string
+        compartment:
+          type: string
+
+    MetricValue:
+      type: object
+      additionalProperties: false
+      required:
+        - metricId
+        - value
+      properties:
+        metricId:
+          type: string
+        metricName:
+          type: string
+        value:
+          $ref: "#/components/schemas/Quantity"
+
+    TimeSeriesPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - observedAt
+        - metrics
+      properties:
+        observedAt:
+          type: string
+          format: date-time
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricValue"
+
+    StateVariable:
+      type: object
+      additionalProperties: false
+      required:
+        - variableId
+        - value
+      properties:
+        variableId:
+          type: string
+        value:
+          $ref: "#/components/schemas/Quantity"
+
+    SystemStateSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - snapshotId
+        - assetId
+        - capturedAt
+        - variables
+      properties:
+        snapshotId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+        capturedAt:
+          type: string
+          format: date-time
+        variables:
+          type: array
+          items:
+            $ref: "#/components/schemas/StateVariable"
+
+    SystemStateSnapshotPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemStateSnapshot"
+        nextCursor:
+          type: string
+          description: Opaque cursor for pagination continuation.
+
+    MetricDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - metricId
+        - unit
+        - quantityKind
+      properties:
+        metricId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+          format: uri
+        quantityKind:
+          type: string
+          format: uri
+        semanticId:
+          type: string
+          format: uri
+          description: Optional IRDI or URI representing a semantic identifier.
+        tags:
+          type: array
+          items:
+            type: string
+
+    WebhookSubscriptionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - callbackUrl
+        - secret
+        - eventTypes
+      properties:
+        callbackUrl:
+          type: string
+          format: uri
+        secret:
+          type: string
+          description: Shared secret used for HMAC signature computation.
+        eventTypes:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+
+    WebhookSubscription:
+      type: object
+      additionalProperties: false
+      required:
+        - subscriptionId
+        - callbackUrl
+        - eventTypes
+        - active
+        - createdAt
+      properties:
+        subscriptionId:
+          type: string
+          format: uuid
+        callbackUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        eventTypes:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+
+    SimulationJobStateChangedEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - specversion
+        - id
+        - source
+        - type
+        - time
+        - data
+      properties:
+        specversion:
+          type: string
+          enum: ["1.0"]
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+          format: uri
+        type:
+          type: string
+          example: data4circ.icd13.simulation.job.state.changed
+        datacontenttype:
+          type: string
+          enum: ["application/json"]
+        time:
+          type: string
+          format: date-time
+        data:
+          $ref: "#/components/schemas/SimulationJobStateChangedEventData"
+
+    SimulationJobStateChangedEventData:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - status
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [COMPLETED, FAILED]
+        result:
+          type: string
+          format: uri
+          description: Result URL populated for COMPLETED events.
+        error:
+          $ref: "#/components/schemas/ProblemDetails"
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        correlationId:
+          type: string
+          description: Trace identifier aligned with X-Request-ID.
+        errors:
+          type: object

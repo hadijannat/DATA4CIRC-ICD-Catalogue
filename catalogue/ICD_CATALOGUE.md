@@ -53,10 +53,10 @@ This catalogue serves as the interface register and identifier authority for the
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
 | [ICD-08](../icds/application/ICD-08/ICD-08.md) | DATA4CIRC Portal ↔ LCA Tool | REST API, data exchange | WP4 | Draft |
-| [ICD-09](../icds/application/ICD-09/ICD-09.md) | DATA4CIRC Portal ↔ DPP/AAS Tool | REST API, AAS operations | WP4 | Draft |
+| [ICD-09](../icds/application/ICD-09/ICD-09.md) | DT/DTh Portal ↔ DT/DTh Application | REST API, WebSocket collaboration | WP5 | Approved |
 | [ICD-10](../icds/application/ICD-10/ICD-10.md) | DATA4CIRC Portal ↔ DT/DTh Tool | REST API, simulation data | WP4 | Draft |
 | [ICD-11](../icds/application/ICD-11/ICD-11.md) | LCA Tool ↔ DPP/AAS Tool | Data synchronisation | WP4 | Draft |
-| [ICD-12](../icds/application/ICD-12/ICD-12.md) | LCA Tool ↔ DT/DTh Tool | Simulation parameters | WP4 | Draft |
+| [ICD-12](../icds/application/ICD-12/ICD-12.md) | DPP/AAS Application ↔ DT/DTh Application | AAS discovery, mapping, and synchronisation metadata | WP4 / WP5 | Approved |
 | [ICD-13](../icds/application/ICD-13/ICD-13.md) | DPP/AAS Tool ↔ DT/DTh Tool | Asset state synchronisation | WP4 | Draft |
 
 ### 3.4 Dataspace Interfaces
