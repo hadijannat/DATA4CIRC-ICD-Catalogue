@@ -1,0 +1,821 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC SPIP Governance Services API
+  version: 1.0.0
+  description: >
+    Governance services API between the SPIP Agent (client) and the SPIP Platform (server).
+    Transport security uses HTTPS with TLS 1.3 and mutual TLS. Authentication and authorisation use
+    OAuth 2.0 client credentials with OpenID Connect JWT access tokens.
+servers:
+  - url: https://{spipHost}/api/v1
+    variables:
+      spipHost:
+        default: spip.example.com
+
+security:
+  - oauth2:
+      - spip.read
+
+paths:
+  /capabilities:
+    get:
+      summary: Retrieve supported algorithms and policy language capabilities
+      operationId: getCapabilities
+      security:
+        - oauth2:
+            - spip.read
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Capabilities response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /crypto/encrypt:
+    post:
+      summary: Encrypt payload under an ABE policy
+      operationId: encrypt
+      security:
+        - oauth2:
+            - spip.encrypt
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptRequest'
+      responses:
+        '200':
+          description: Encryption successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncryptResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /crypto/decrypt:
+    post:
+      summary: Decrypt payload subject to ABE policy evaluation
+      operationId: decrypt
+      security:
+        - oauth2:
+            - spip.decrypt
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecryptRequest'
+      responses:
+        '200':
+          description: Decryption successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecryptResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /policies:
+    get:
+      summary: List policies
+      operationId: listPolicies
+      security:
+        - oauth2:
+            - spip.policies:read
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          required: false
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          required: false
+        - name: includeRevoked
+          in: query
+          schema:
+            type: boolean
+          required: false
+      responses:
+        '200':
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, pageSize, total]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PolicyDefinition'
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      summary: Create policy
+      operationId: createPolicy
+      security:
+        - oauth2:
+            - spip.policies:write
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDefinition'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /policies/{policyId}:
+    parameters:
+      - name: policyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Retrieve policy
+      operationId: getPolicy
+      security:
+        - oauth2:
+            - spip.policies:read
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDefinition'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      summary: Update policy
+      operationId: updatePolicy
+      security:
+        - oauth2:
+            - spip.policies:write
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDefinition'
+      responses:
+        '200':
+          description: Updated policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      summary: Revoke policy
+      operationId: revokePolicy
+      security:
+        - oauth2:
+            - spip.policies:write
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Policy revoked
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /keys/issue:
+    post:
+      summary: Issue attribute key material
+      operationId: issueKey
+      security:
+        - oauth2:
+            - spip.keys:issue
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyIssueRequest'
+      responses:
+        '200':
+          description: Key issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyIssueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /health/live:
+    get:
+      summary: Liveness probe
+      operationId: liveness
+      responses:
+        '200':
+          description: Service is live
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [UP]
+
+  /health/ready:
+    get:
+      summary: Readiness probe
+      operationId: readiness
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [UP]
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /metrics:
+    get:
+      summary: Metrics endpoint (Prometheus format)
+      operationId: metrics
+      security:
+        - oauth2:
+            - spip.monitor
+      responses:
+        '200':
+          description: Metrics payload
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://<idp-fqdn>/realms/<realm>/protocol/openid-connect/token
+          scopes:
+            spip.read: Read capabilities
+            spip.encrypt: Encrypt payloads
+            spip.decrypt: Decrypt payloads
+            'spip.policies:read': Read policies
+            'spip.policies:write': Create and update policies
+            'spip.keys:issue': Issue attribute keys
+            spip.monitor: Access metrics
+
+  parameters:
+    TraceParent:
+      name: traceparent
+      in: header
+      required: false
+      schema:
+        type: string
+      description: W3C Trace Context header.
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Client-generated correlation identifier.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Idempotency key used for safe retries.
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Unauthorised:
+      description: Unauthorised
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Conflict:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    PayloadTooLarge:
+      description: Payload too large
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UnprocessableEntity:
+      description: Unprocessable entity
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    TooManyRequests:
+      description: Too many requests
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    InternalError:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ServiceUnavailable:
+      description: Service unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    EncryptRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - payload
+        - payloadContentType
+        - payloadEncoding
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        payload:
+          type: string
+          contentEncoding: base64
+        payloadContentType:
+          type: string
+        payloadEncoding:
+          type: string
+          enum: [base64]
+        policyRef:
+          $ref: '#/components/schemas/PolicyRef'
+        policyInline:
+          $ref: '#/components/schemas/PolicyDefinition'
+        encryptionContext:
+          type: object
+          additionalProperties:
+            type: string
+        aad:
+          type: string
+          contentEncoding: base64
+      oneOf:
+        - required: [policyRef]
+        - required: [policyInline]
+
+    EncryptResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - ciphertext
+        - ciphertextEncoding
+        - envelope
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        ciphertext:
+          type: string
+          contentEncoding: base64
+        ciphertextEncoding:
+          type: string
+          enum: [base64]
+        envelope:
+          $ref: '#/components/schemas/EncryptionEnvelope'
+
+    DecryptRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - ciphertext
+        - ciphertextEncoding
+        - envelope
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        ciphertext:
+          type: string
+          contentEncoding: base64
+        ciphertextEncoding:
+          type: string
+          enum: [base64]
+        envelope:
+          $ref: '#/components/schemas/EncryptionEnvelope'
+        decryptionContext:
+          type: object
+          additionalProperties:
+            type: string
+        aad:
+          type: string
+          contentEncoding: base64
+
+    DecryptResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - payload
+        - payloadContentType
+        - payloadEncoding
+        - policyId
+        - policyVersion
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        payload:
+          type: string
+          contentEncoding: base64
+        payloadContentType:
+          type: string
+        payloadEncoding:
+          type: string
+          enum: [base64]
+        policyId:
+          type: string
+          format: uuid
+        policyVersion:
+          type: integer
+        auditEventId:
+          type: string
+          format: uuid
+
+    EncryptionEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - envelopeVersion
+        - contentAlgorithm
+        - keyAlgorithm
+        - policyId
+        - policyVersion
+        - iv
+        - tag
+        - abeCiphertext
+        - issuedAt
+      properties:
+        envelopeVersion:
+          type: integer
+          minimum: 1
+        contentAlgorithm:
+          type: string
+          enum: [AES-256-GCM]
+        keyAlgorithm:
+          type: string
+          enum: [CP-ABE]
+        policyId:
+          type: string
+          format: uuid
+        policyVersion:
+          type: integer
+        iv:
+          type: string
+          contentEncoding: base64
+        tag:
+          type: string
+          contentEncoding: base64
+        abeCiphertext:
+          type: string
+          contentEncoding: base64
+        issuedAt:
+          type: string
+          format: date-time
+
+    PolicyRef:
+      type: object
+      additionalProperties: false
+      required: [policyId, policyVersion]
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        policyVersion:
+          type: integer
+          minimum: 1
+
+    PolicyDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - expression
+        - version
+        - status
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        expression:
+          type: string
+          minLength: 1
+        attributeNamespace:
+          type: string
+          format: uri
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [ACTIVE, REVOKED]
+        validFrom:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    KeyIssueRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - keyPurpose
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        keyPurpose:
+          type: string
+          enum: [DECRYPT, ENCRYPT]
+        ttlSeconds:
+          type: integer
+          minimum: 60
+        policyId:
+          type: string
+          format: uuid
+        audience:
+          type: string
+          format: uri
+
+    KeyIssueResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - keyId
+        - keyMaterial
+        - keyMaterialEncoding
+        - issuedAt
+        - expiresAt
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        keyId:
+          type: string
+          format: uuid
+        keyMaterial:
+          type: string
+          contentEncoding: base64
+        keyMaterialEncoding:
+          type: string
+          enum: [base64]
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      required: [serviceName, apiVersion, supportedContentAlgorithms, supportedKeyAlgorithms, policyLanguageVersion, maxPayloadSizeBytes]
+      properties:
+        serviceName:
+          type: string
+          const: SPIP Platform
+        apiVersion:
+          type: string
+          pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+        supportedContentAlgorithms:
+          type: array
+          items:
+            type: string
+        supportedKeyAlgorithms:
+          type: array
+          items:
+            type: string
+        policyLanguageVersion:
+          type: string
+        maxPayloadSizeBytes:
+          type: integer
+          minimum: 1
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errorCode:
+          type: string
+        correlationId:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+        validationErrors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, message]
+            properties:
+              field:
+                type: string
+              message:
+                type: string
