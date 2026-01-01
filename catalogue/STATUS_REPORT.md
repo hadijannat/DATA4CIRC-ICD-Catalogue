@@ -1,0 +1,19 @@
+# ICD Catalogue Status Report
+
+Generated automatically on each merge to main.
+
+## Document Status Summary
+
+| Status | Count |
+|--------|-------|
+| Draft | 0 |
+| Under Review | 0 |
+| Approved | 0 |
+| Implemented | 0 |
+| Deprecated | 0 |
+
+## Recent Changes
+
+| Date | ICD | Author | Commit |
+|------|-----|--------|--------|
+| 2026-01-01 |  | hadijannat | 5c7f8b8 |
