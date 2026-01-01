@@ -6,6 +6,22 @@
 
 This repository contains the Interface Control Document (ICD) specifications for the DATA4CIRC federated dataspace platform. The ICD Catalogue defines interfaces between subsystems across all work packages within the EU Horizon Europe DATA4CIRC project.
 
+## Architecture Overview
+
+The following diagram illustrates the DATA4CIRC federated dataspace architecture, showing the relationships between work packages and interface control documents:
+
+<p align="center">
+  <img src="./assets/architecture-animated.svg" alt="DATA4CIRC Architecture" width="100%">
+</p>
+
+The architecture comprises three main service domains within the Inter-Organisational Stack:
+
+| Domain | Work Package | Components |
+|--------|--------------|------------|
+| Trust and Governance | WP3 | DS4CIRC Portal, SPIP Platform |
+| Dataspace Services | — | Dataspace Connector, SPIP Agent |
+| Circular Economy | WP4, WP5, WP6 | DPP/AAS, DT/DTh, LCA Portals and Applications |
+
 ## Repository Structure
 
 | Directory | Description |

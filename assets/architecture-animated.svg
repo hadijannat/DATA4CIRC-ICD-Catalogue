@@ -1,0 +1,268 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="100%" height="100%">
+  <defs>
+    <!-- Gradient definitions -->
+    <linearGradient id="portalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8f4fc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d0e8f8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wp3Gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e8e8e8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wp4Gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff3e0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffe0b2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wp5Gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8f5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c8e6c9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wp6Gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fce4ec;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f8bbd9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="dataGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e3f2fd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bbdefb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Animated dot for data flow -->
+    <circle id="flowDot" r="4" fill="#2196F3">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <style>
+    .title { font: bold 14px 'Segoe UI', Arial, sans-serif; fill: #333; }
+    .subtitle { font: 11px 'Segoe UI', Arial, sans-serif; fill: #666; }
+    .component { font: bold 11px 'Segoe UI', Arial, sans-serif; fill: #333; }
+    .wp-label { font: bold 12px 'Segoe UI', Arial, sans-serif; }
+    .icd-label { font: bold 9px 'Segoe UI', Arial, sans-serif; fill: #1976D2; }
+    .section-title { font: bold 10px 'Segoe UI', Arial, sans-serif; fill: #555; }
+    
+    .box { stroke-width: 1.5; rx: 6; ry: 6; filter: url(#shadow); }
+    .box:hover { filter: url(#glow); cursor: pointer; }
+    
+    .connection { stroke-width: 2; fill: none; stroke-dasharray: 5,3; }
+    .connection-solid { stroke-width: 2; fill: none; }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    
+    .portal-box { animation: pulse 3s ease-in-out infinite; transform-origin: center; }
+  </style>
+  
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  
+  <!-- Main Title -->
+  <text x="500" y="30" text-anchor="middle" class="title" style="font-size: 16px;">DATA4CIRC Federated Dataspace Architecture</text>
+  
+  <!-- DATA4CIRC Portal (Top) -->
+  <g class="portal-box">
+    <rect x="400" y="50" width="200" height="50" rx="8" ry="8" fill="url(#portalGradient)" stroke="#1976D2" class="box"/>
+    <text x="500" y="80" text-anchor="middle" class="component">DATA4CIRC Portal</text>
+  </g>
+  
+  <!-- Inter-Organisational Stack Container -->
+  <rect x="30" y="140" width="940" height="380" rx="10" ry="10" fill="none" stroke="#1565C0" stroke-width="2" stroke-dasharray="8,4">
+    <animate attributeName="stroke-dashoffset" from="0" to="24" dur="2s" repeatCount="indefinite"/>
+  </rect>
+  <text x="50" y="160" class="section-title" fill="#1565C0">Inter-Organisational Stack</text>
+  
+  <!-- WP3: Trust and Governance Dataspace Services -->
+  <rect x="50" y="180" width="200" height="320" rx="8" ry="8" fill="url(#wp3Gradient)" stroke="#9E9E9E" class="box"/>
+  <text x="150" y="200" text-anchor="middle" class="wp-label" fill="#F44336">WP3</text>
+  <text x="150" y="215" text-anchor="middle" class="section-title">Trust and Governance</text>
+  <text x="150" y="228" text-anchor="middle" class="section-title">Dataspace Services</text>
+  
+  <!-- DS4CIRC Portal -->
+  <rect x="70" y="250" width="160" height="40" rx="6" ry="6" fill="white" stroke="#616161" class="box"/>
+  <text x="150" y="275" text-anchor="middle" class="component">DS4CIRC Portal</text>
+  
+  <!-- SPIP Platform -->
+  <rect x="70" y="320" width="160" height="40" rx="6" ry="6" fill="white" stroke="#616161" class="box"/>
+  <text x="150" y="345" text-anchor="middle" class="component">SPIP Platform</text>
+  
+  <!-- Inter-Organisational Dataspace Services (Center) -->
+  <rect x="280" y="180" width="180" height="320" rx="8" ry="8" fill="url(#wp3Gradient)" stroke="#9E9E9E" class="box"/>
+  <text x="370" y="200" text-anchor="middle" class="section-title">Inter-Organisational</text>
+  <text x="370" y="215" text-anchor="middle" class="section-title">Dataspace Services</text>
+  
+  <!-- Dataspace Connector -->
+  <rect x="300" y="250" width="140" height="40" rx="6" ry="6" fill="white" stroke="#616161" class="box"/>
+  <text x="370" y="275" text-anchor="middle" class="component">Dataspace</text>
+  <text x="370" y="288" text-anchor="middle" class="component" style="font-size:9px;">Connector</text>
+  <text x="285" y="270" class="icd-label">17</text>
+  
+  <!-- SPIP Agent -->
+  <rect x="300" y="420" width="140" height="40" rx="6" ry="6" fill="white" stroke="#616161" class="box"/>
+  <text x="370" y="445" text-anchor="middle" class="component">SPIP Agent</text>
+  
+  <!-- Inter-Organisational Circular Economy Services -->
+  <rect x="490" y="180" width="460" height="320" rx="8" ry="8" fill="none" stroke="#4CAF50" stroke-width="2" stroke-dasharray="6,3">
+    <animate attributeName="stroke-dashoffset" from="0" to="18" dur="1.5s" repeatCount="indefinite"/>
+  </rect>
+  <text x="510" y="200" class="section-title" fill="#4CAF50">Inter-Organisational Circular Economy Services</text>
+  
+  <!-- WP4: DPP/AAS -->
+  <rect x="510" y="220" width="130" height="270" rx="6" ry="6" fill="url(#wp4Gradient)" stroke="#FF9800" class="box"/>
+  <text x="575" y="240" text-anchor="middle" class="wp-label" fill="#FF9800">WP4</text>
+  
+  <rect x="520" y="260" width="110" height="35" rx="4" ry="4" fill="white" stroke="#FB8C00" class="box"/>
+  <text x="575" y="282" text-anchor="middle" class="component" style="font-size:10px;">DPP/AAS Portal</text>
+  <text x="640" y="277" class="icd-label">8</text>
+  
+  <rect x="520" y="320" width="110" height="50" rx="4" ry="4" fill="white" stroke="#FB8C00" class="box"/>
+  <text x="575" y="342" text-anchor="middle" class="component" style="font-size:9px;">DPP/AAS</text>
+  <text x="575" y="355" text-anchor="middle" class="component" style="font-size:9px;">Application</text>
+  <text x="640" y="345" class="icd-label">14</text>
+  
+  <!-- WP5: DT/DTh -->
+  <rect x="660" y="220" width="130" height="270" rx="6" ry="6" fill="url(#wp5Gradient)" stroke="#4CAF50" class="box"/>
+  <text x="725" y="240" text-anchor="middle" class="wp-label" fill="#4CAF50">WP5</text>
+  
+  <rect x="670" y="260" width="110" height="35" rx="4" ry="4" fill="white" stroke="#43A047" class="box"/>
+  <text x="725" y="282" text-anchor="middle" class="component" style="font-size:10px;">DT/DTh Portal</text>
+  <text x="655" y="277" class="icd-label">9</text>
+  <text x="790" y="277" class="icd-label">11</text>
+  
+  <rect x="670" y="320" width="110" height="50" rx="4" ry="4" fill="white" stroke="#43A047" class="box"/>
+  <text x="725" y="342" text-anchor="middle" class="component" style="font-size:9px;">DT/DTh</text>
+  <text x="725" y="355" text-anchor="middle" class="component" style="font-size:9px;">Application</text>
+  <text x="655" y="345" class="icd-label">12</text>
+  <text x="790" y="345" class="icd-label">15</text>
+  
+  <!-- WP6: LCA -->
+  <rect x="810" y="220" width="120" height="270" rx="6" ry="6" fill="url(#wp6Gradient)" stroke="#E91E63" class="box"/>
+  <text x="870" y="240" text-anchor="middle" class="wp-label" fill="#E91E63">WP6</text>
+  
+  <rect x="820" y="260" width="100" height="35" rx="4" ry="4" fill="white" stroke="#D81B60" class="box"/>
+  <text x="870" y="282" text-anchor="middle" class="component" style="font-size:10px;">LCA Portal</text>
+  <text x="805" y="277" class="icd-label">10</text>
+  
+  <rect x="820" y="320" width="100" height="50" rx="4" ry="4" fill="white" stroke="#D81B60" class="box"/>
+  <text x="870" y="342" text-anchor="middle" class="component" style="font-size:9px;">LCA</text>
+  <text x="870" y="355" text-anchor="middle" class="component" style="font-size:9px;">Application</text>
+  <text x="805" y="345" class="icd-label">13</text>
+  <text x="930" y="345" class="icd-label">16</text>
+  
+  <!-- Data Sources -->
+  <ellipse cx="580" cy="600" rx="80" ry="40" fill="url(#dataGradient)" stroke="#1976D2" stroke-width="2" class="box">
+    <animate attributeName="ry" values="40;42;40" dur="2s" repeatCount="indefinite"/>
+  </ellipse>
+  <text x="580" y="605" text-anchor="middle" class="component">Data Sources</text>
+  
+  <!-- Connection Lines with Animated Flow -->
+  
+  <!-- Portal to sections (ICD 1-4) -->
+  <path d="M 450 100 L 150 140" stroke="#1565C0" class="connection">
+    <animate attributeName="stroke-dashoffset" from="16" to="0" dur="0.8s" repeatCount="indefinite"/>
+  </path>
+  <circle r="5" fill="#1565C0">
+    <animateMotion dur="1.5s" repeatCount="indefinite" path="M 450,100 L 150,140"/>
+  </circle>
+  <text x="280" y="115" class="icd-label">1</text>
+  
+  <path d="M 500 100 L 575 140" stroke="#1565C0" class="connection">
+    <animate attributeName="stroke-dashoffset" from="16" to="0" dur="0.8s" repeatCount="indefinite"/>
+  </path>
+  <circle r="5" fill="#1565C0">
+    <animateMotion dur="1.5s" repeatCount="indefinite" path="M 500,100 L 575,140"/>
+  </circle>
+  <text x="545" y="115" class="icd-label">2</text>
+  
+  <path d="M 550 100 L 725 140" stroke="#1565C0" class="connection">
+    <animate attributeName="stroke-dashoffset" from="16" to="0" dur="0.8s" repeatCount="indefinite"/>
+  </path>
+  <circle r="5" fill="#1565C0">
+    <animateMotion dur="1.5s" repeatCount="indefinite" path="M 550,100 L 725,140"/>
+  </circle>
+  <text x="650" y="115" class="icd-label">3</text>
+  
+  <path d="M 580 100 L 870 140" stroke="#1565C0" class="connection">
+    <animate attributeName="stroke-dashoffset" from="16" to="0" dur="0.8s" repeatCount="indefinite"/>
+  </path>
+  <circle r="5" fill="#1565C0">
+    <animateMotion dur="1.5s" repeatCount="indefinite" path="M 580,100 L 870,140"/>
+  </circle>
+  <text x="750" y="105" class="icd-label">4</text>
+  
+  <!-- Governance connections (ICD 5-7) -->
+  <path d="M 250 270 L 300 270" stroke="#9C27B0" class="connection-solid" marker-end="url(#arrow)">
+    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <circle r="4" fill="#9C27B0">
+    <animateMotion dur="1s" repeatCount="indefinite" path="M 250,270 L 300,270"/>
+  </circle>
+  <text x="268" y="262" class="icd-label" fill="#9C27B0">5</text>
+  
+  <path d="M 230 340 L 300 420" stroke="#9C27B0" class="connection-solid">
+    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <circle r="4" fill="#9C27B0">
+    <animateMotion dur="1.2s" repeatCount="indefinite" path="M 230,340 L 300,420"/>
+  </circle>
+  <text x="250" y="390" class="icd-label" fill="#9C27B0">6</text>
+  
+  <path d="M 150 290 L 150 320" stroke="#9C27B0" class="connection-solid">
+    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <text x="160" y="308" class="icd-label" fill="#9C27B0">7</text>
+  
+  <!-- Application to SPIP Agent (ICD 14) -->
+  <path d="M 520 370 L 440 430" stroke="#FF9800" class="connection-solid">
+    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <circle r="4" fill="#FF9800">
+    <animateMotion dur="1s" repeatCount="indefinite" path="M 520,370 L 440,430"/>
+  </circle>
+  
+  <!-- DT/DTh to SPIP Agent (ICD 15) -->
+  <path d="M 670 370 L 440 440" stroke="#4CAF50" class="connection-solid">
+    <animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  <circle r="4" fill="#4CAF50">
+    <animateMotion dur="1.2s" repeatCount="indefinite" path="M 670,370 L 440,440"/>
+  </circle>
+  
+  <!-- Data Sources connections (ICD 18) -->
+  <path d="M 575 400 L 575 560" stroke="#1976D2" class="connection" stroke-dasharray="4,4">
+    <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" repeatCount="indefinite"/>
+  </path>
+  <circle r="5" fill="#1976D2">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M 575,560 L 575,400"/>
+  </circle>
+  
+  <path d="M 725 400 L 600 560" stroke="#4CAF50" class="connection" stroke-dasharray="4,4">
+    <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" repeatCount="indefinite"/>
+  </path>
+  <circle r="5" fill="#4CAF50">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M 600,560 L 725,400"/>
+  </circle>
+  
+  <!-- Legend -->
+  <rect x="720" y="580" width="250" height="85" rx="6" ry="6" fill="white" stroke="#ddd" stroke-width="1"/>
+  <text x="845" y="598" text-anchor="middle" class="section-title">ICD References</text>
+  <text x="735" y="618" class="subtitle">18.1: DPP/AAS to Data Sources → WP4</text>
+  <text x="735" y="635" class="subtitle">18.2: DT/DTh to Data Sources → WP5</text>
+  <line x1="730" y1="645" x2="960" y2="645" stroke="#eee" stroke-width="1"/>
+  <text x="845" y="658" text-anchor="middle" class="subtitle" style="font-style:italic;">Numbers indicate ICD identifiers</text>
+  
+</svg>
