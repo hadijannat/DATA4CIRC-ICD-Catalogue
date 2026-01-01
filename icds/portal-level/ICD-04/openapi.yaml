@@ -1,0 +1,146 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-04 LCA Portal Deep Link API
+  version: "1.0"
+  description: >
+    OpenAPI description for the LCA Portal deep-link entry point used by the DATA4CIRC Portal.
+servers:
+  - url: ${LCA_PORTAL_BASE_URL}
+paths:
+  /deeplink/v1:
+    get:
+      summary: Resolve deep-link context and redirect to target route
+      description: >
+        Validates optional Portal Context Token (PCT) provided as ctx query parameter.
+        Performs OIDC session validation and redirects the user agent to the resolved LCA Portal route.
+      parameters:
+        - name: ctx
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Portal Context Token (PCT) in JWT compact serialisation.
+        - name: target
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [dashboard, project, assessment]
+          description: Target view selector.
+        - name: lca_project_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Target LCA project identifier.
+        - name: dpp_uri
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Digital product passport resource URI.
+        - name: return_url
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Return URL restricted to DATA4CIRC Portal allow-list.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+          description: UI language selector (ISO 639-1).
+        - name: traceparent
+          in: header
+          required: false
+          schema:
+            type: string
+          description: W3C Trace Context header.
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Request correlation identifier.
+      responses:
+        "302":
+          description: Redirect to resolved LCA Portal route.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Redirect target route.
+            Cache-Control:
+              schema:
+                type: string
+              description: Cache control directive.
+        "400":
+          description: Invalid deep-link context.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "401":
+          description: Unauthenticated session. OIDC redirection is performed by UI layer.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "403":
+          description: Authenticated session without required role.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "409":
+          description: Replay detected or conflicting session state.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: Rate limit exceeded.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: Dependency unavailable (Keycloak).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+components:
+  schemas:
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: Stable error type identifier (URN).
+        title:
+          type: string
+          description: Short, human-readable summary.
+        status:
+          type: integer
+          description: HTTP status code.
+        detail:
+          type: string
+          description: Human-readable explanation specific to the occurrence.
+        instance:
+          type: string
+          description: Request path or instance identifier.
+        correlation_id:
+          type: string
+          description: Correlation identifier derived from trace context.
