@@ -1,0 +1,158 @@
+name: Validate ICD Documents
+
+on:
+  pull_request:
+    paths:
+      - 'icds/**/*.md'
+      - 'icds/**/*.yaml'
+      - 'icds/**/*.yml'
+
+jobs:
+  validate-markdown:
+    name: Validate Markdown Structure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Validate Markdown files
+        run: |
+          # Create markdownlint configuration
+          cat > .markdownlint.json << 'EOF'
+          {
+            "default": true,
+            "MD013": false,
+            "MD033": false,
+            "MD041": false,
+            "MD024": {
+              "siblings_only": true
+            }
+          }
+          EOF
+          
+          # Run markdownlint on ICD documents
+          markdownlint 'icds/**/*.md' --config .markdownlint.json
+
+  validate-openapi:
+    name: Validate OpenAPI Specifications
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install swagger-cli
+        run: npm install -g @apidevtools/swagger-cli
+
+      - name: Validate OpenAPI files
+        run: |
+          # Find and validate all OpenAPI specification files
+          find icds -name 'openapi.yaml' -o -name 'openapi.yml' | while read file; do
+            echo "Validating: $file"
+            # Only validate if file has content (not empty placeholder)
+            if [ -s "$file" ]; then
+              swagger-cli validate "$file" || echo "Warning: $file validation failed"
+            else
+              echo "Skipping empty file: $file"
+            fi
+          done
+
+  check-required-sections:
+    name: Check Required ICD Sections
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check mandatory sections
+        run: |
+          # Define required sections
+          REQUIRED_SECTIONS=(
+            "## 1. Interface Overview"
+            "## 2. Functional Description"
+            "## 3. Abbreviations"
+            "## 4. Communication Protocol"
+            "## 5. API Specification"
+            "## 6. Data Structures and Semantics"
+            "## 7. Security Requirements"
+            "## 8. Performance Requirements"
+            "## 9. Implementation Guidelines"
+            "## 10. Requirements Traceability Matrix"
+            "## 11. Acceptance Criteria"
+            "## 12. References"
+            "## 13. Version History"
+          )
+          
+          # Get list of changed ICD files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD -- 'icds/**/*.md' 2>/dev/null || find icds -name 'ICD-*.md' -size +0)
+          
+          EXIT_CODE=0
+          
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ] && [ -s "$file" ]; then
+              echo "Checking sections in: $file"
+              for section in "${REQUIRED_SECTIONS[@]}"; do
+                if ! grep -q "$section" "$file"; then
+                  echo "  Missing section: $section"
+                  EXIT_CODE=1
+                fi
+              done
+            fi
+          done
+          
+          exit $EXIT_CODE
+
+  check-writing-style:
+    name: Check Writing Style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for prohibited patterns
+        run: |
+          # Get list of changed ICD files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD -- 'icds/**/*.md' 2>/dev/null || find icds -name 'ICD-*.md' -size +0)
+          
+          EXIT_CODE=0
+          
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ] && [ -s "$file" ]; then
+              echo "Checking writing style in: $file"
+              
+              # Check for American English spellings
+              if grep -in "serialization\|synchronize\|authorize\|organize\|analyze\|utilize\|customize" "$file"; then
+                echo "  Warning: American English spelling detected (use British English)"
+              fi
+              
+              # Check for personal pronouns at sentence start
+              if grep -in "^We \|^I \|^You \|^Our " "$file"; then
+                echo "  Warning: Personal pronouns detected"
+              fi
+              
+              # Check for subjunctive mood
+              if grep -in " could \| would \| might \| should \| maybe " "$file"; then
+                echo "  Warning: Subjunctive mood detected (use shall, is, provides)"
+              fi
+              
+              # Check for em dashes
+              if grep -n "—" "$file"; then
+                echo "  Warning: Em dashes detected (use commas or parentheses)"
+              fi
+            fi
+          done
+          
+          # Exit with warning but don't fail the build
+          exit 0

@@ -1,0 +1,193 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://data4circ.eu/schemas/icd-schema.json",
+    "title": "DATA4CIRC ICD Metadata Schema",
+    "description": "JSON Schema for validating ICD document metadata",
+    "type": "object",
+    "required": [
+        "icd_id",
+        "title",
+        "version",
+        "date",
+        "work_package",
+        "status",
+        "components"
+    ],
+    "properties": {
+        "icd_id": {
+            "type": "string",
+            "pattern": "^ICD-(0[1-9]|1[0-8])(-[12])?$",
+            "description": "Interface Control Document identifier (ICD-01 to ICD-18-2)"
+        },
+        "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200,
+            "description": "Interface title describing the communicating components"
+        },
+        "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+$",
+            "description": "Semantic version in MAJOR.MINOR format"
+        },
+        "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Document date in ISO 8601 format"
+        },
+        "work_package": {
+            "type": "string",
+            "pattern": "^WP[1-6]$",
+            "description": "Responsible Work Package (WP1-WP6)"
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "Draft",
+                "Under Review",
+                "Approved",
+                "Implemented",
+                "Deprecated"
+            ],
+            "description": "Document status"
+        },
+        "authors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "organisation"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Author name"
+                    },
+                    "organisation": {
+                        "type": "string",
+                        "description": "Author organisation"
+                    }
+                }
+            },
+            "minItems": 1,
+            "description": "List of document authors"
+        },
+        "components": {
+            "type": "object",
+            "required": [
+                "provider",
+                "consumer"
+            ],
+            "properties": {
+                "provider": {
+                    "$ref": "#/$defs/component",
+                    "description": "Provider component details"
+                },
+                "consumer": {
+                    "$ref": "#/$defs/component",
+                    "description": "Consumer component details"
+                }
+            }
+        },
+        "category": {
+            "type": "string",
+            "enum": [
+                "portal-level",
+                "governance",
+                "application",
+                "dataspace",
+                "data-source"
+            ],
+            "description": "Interface category"
+        },
+        "protocol": {
+            "type": "object",
+            "properties": {
+                "application": {
+                    "type": "string",
+                    "enum": [
+                        "HTTP/REST",
+                        "DSP",
+                        "MQTT v5",
+                        "OPC UA",
+                        "gRPC"
+                    ],
+                    "description": "Application layer protocol"
+                },
+                "security": {
+                    "type": "string",
+                    "enum": [
+                        "OAuth 2.0",
+                        "OpenID Connect",
+                        "mTLS",
+                        "API Key",
+                        "None"
+                    ],
+                    "description": "Security mechanism"
+                },
+                "transport": {
+                    "type": "string",
+                    "enum": [
+                        "HTTPS",
+                        "TCP",
+                        "WebSocket",
+                        "TLS"
+                    ],
+                    "description": "Transport protocol"
+                },
+                "serialisation": {
+                    "type": "string",
+                    "enum": [
+                        "JSON",
+                        "JSON-LD",
+                        "XML",
+                        "Protobuf",
+                        "SparkplugB"
+                    ],
+                    "description": "Data serialisation format"
+                }
+            }
+        },
+        "dependencies": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "pattern": "^ICD-(0[1-9]|1[0-8])(-[12])?$"
+            },
+            "description": "List of prerequisite ICD identifiers"
+        },
+        "srs_references": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "pattern": "^SRS-[0-9]+-[0-9]+$"
+            },
+            "description": "D2.2 Software Requirements Specification references"
+        }
+    },
+    "$defs": {
+        "component": {
+            "type": "object",
+            "required": [
+                "name",
+                "work_package"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Component name"
+                },
+                "work_package": {
+                    "type": "string",
+                    "pattern": "^WP[1-6]$",
+                    "description": "Responsible Work Package"
+                },
+                "partner": {
+                    "type": "string",
+                    "description": "Responsible partner organisation acronym"
+                }
+            }
+        }
+    }
+}

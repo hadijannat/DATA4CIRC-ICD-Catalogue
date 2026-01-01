@@ -1,0 +1,432 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC Interface API Template
+  description: |
+    OpenAPI specification template for DATA4CIRC Interface Control Documents.
+    
+    This template provides the baseline structure for HTTP/REST interface
+    specifications. Copy this file to the ICD directory and customise for
+    the specific interface requirements.
+  version: 0.1.0
+  contact:
+    name: WP4 Interface Design and Development Team
+    email: contact@data4circ.eu
+  license:
+    name: CC BY-SA 4.0
+    url: https://creativecommons.org/licenses/by-sa/4.0/
+
+servers:
+  - url: https://api.data4circ.eu/v1
+    description: Production server
+  - url: https://staging-api.data4circ.eu/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check and readiness endpoints
+  - name: Resources
+    description: Resource management operations
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: |
+        Returns the health status of the service. Used for container
+        orchestration liveness probes.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check endpoint
+      description: |
+        Returns the readiness status of the service. Used for container
+        orchestration readiness probes. Returns 200 when the service is
+        ready to accept traffic.
+      operationId: getReady
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+
+  /resources:
+    get:
+      tags:
+        - Resources
+      summary: List resources
+      description: Returns a paginated list of resources.
+      operationId: listResources
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of resources to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of resources to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Resources
+      summary: Create resource
+      description: Creates a new resource.
+      operationId: createResource
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceCreate'
+      responses:
+        '201':
+          description: Resource created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /resources/{id}:
+    get:
+      tags:
+        - Resources
+      summary: Get resource by ID
+      description: Returns a single resource by its identifier.
+      operationId: getResource
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Resource identifier
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Resources
+      summary: Update resource
+      description: Updates an existing resource.
+      operationId: updateResource
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Resource identifier
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceUpdate'
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Resources
+      summary: Delete resource
+      description: Deletes a resource by its identifier.
+      operationId: deleteResource
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Resource identifier
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Resource deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        OAuth 2.0 Bearer Token authentication. Tokens are issued by the
+        DATA4CIRC Keycloak identity provider.
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Current health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of health check
+
+    ReadyResponse:
+      type: object
+      required:
+        - ready
+      properties:
+        ready:
+          type: boolean
+          description: Whether the service is ready to accept traffic
+        dependencies:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Status of service dependencies
+
+    Resource:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique resource identifier
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Resource name
+        description:
+          type: string
+          maxLength: 2000
+          description: Resource description
+        created_at:
+          type: string
+          format: date-time
+          description: Resource creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Resource last update timestamp
+
+    ResourceCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Resource name
+        description:
+          type: string
+          maxLength: 2000
+          description: Resource description
+
+    ResourceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Resource name
+        description:
+          type: string
+          maxLength: 2000
+          description: Resource description
+
+    ResourceList:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resource'
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of resources
+        limit:
+          type: integer
+          description: Maximum items per page
+        offset:
+          type: integer
+          description: Number of items skipped
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457 Problem Details for HTTP APIs
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI reference identifying the problem type
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence
+        instance:
+          type: string
+          format: uri
+          description: URI reference identifying the specific occurrence
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://data4circ.eu/problems/validation-error
+            title: Validation Error
+            status: 400
+            detail: The 'name' field is required
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://data4circ.eu/problems/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: Bearer token is missing or invalid
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://data4circ.eu/problems/not-found
+            title: Not Found
+            status: 404
+            detail: Resource with the specified ID does not exist
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://data4circ.eu/problems/internal-error
+            title: Internal Server Error
+            status: 500
+            detail: An unexpected error occurred
