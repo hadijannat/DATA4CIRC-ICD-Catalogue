@@ -36,7 +36,7 @@ This catalogue serves as the interface register and identifier authority for the
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
 | [ICD-01](../icds/portal-level/ICD-01/ICD-01.md) | DATA4CIRC Portal ↔ DS4CIRC Portal | SSO, deep link, role propagation | WP3 | Approved |
-| [ICD-02](../icds/portal-level/ICD-02/ICD-02.md) | DATA4CIRC Portal ↔ DPP/AAS Portal | SSO, deep link, role propagation | WP4 | Draft |
+| [ICD-02](../icds/portal-level/ICD-02/ICD-02.md) | DATA4CIRC Portal ↔ DPP/AAS Portal | SSO, deep link, role propagation | WP4 | Approved |
 | [ICD-03](../icds/portal-level/ICD-03/ICD-03.md) | DATA4CIRC Portal ↔ LCA Tool Portal | SSO, deep link, role propagation | WP4 | Draft |
 | [ICD-04](../icds/portal-level/ICD-04/ICD-04.md) | DATA4CIRC Portal ↔ DT/DTh Tool Portal | SSO, deep link, role propagation | WP4 | Draft |
 

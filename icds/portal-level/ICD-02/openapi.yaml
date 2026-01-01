@@ -1,0 +1,147 @@
+openapi: 3.1.0
+info:
+  title: ICD-02 Portal Launch API
+  version: 1.0.0
+  description: >-
+    Portal-level interface for single sign-on deep linking and role propagation
+    between the DATA4CIRC Portal and the DPP/AAS Portal.
+servers:
+  - url: https://<dpp-portal-host>
+paths:
+  /portal/v1/launch:
+    get:
+      summary: Launch DPP/AAS Portal with deep link context
+      description: >-
+        Entry endpoint for tool launch from the DATA4CIRC Portal. The endpoint
+        validates the deep link context, initiates OIDC authentication when an
+        authenticated session is not present, and redirects the user agent to
+        the requested target route.
+      parameters:
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+          description: URI reference for the target route within the DPP/AAS Portal.
+        - name: aasId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Asset administration shell identifier.
+        - name: assetId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Digital product passport asset identifier.
+        - name: returnUrl
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Absolute return URL for navigation back to the DATA4CIRC Portal.
+      responses:
+        "302":
+          description: Redirect to OIDC login or to the resolved target route.
+        "400":
+          description: Invalid deep link context.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /portal/v1/session:
+    get:
+      summary: Retrieve authenticated user session and role claims
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionInfo"
+        "401":
+          description: Authentication required.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /portal/v1/logout:
+    post:
+      summary: Logout and invalidate portal and identity provider sessions
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                postLogoutRedirectUri:
+                  type: string
+                  format: uri
+      responses:
+        "204":
+          description: Logout successful.
+        "401":
+          description: Authentication required.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    SessionInfo:
+      type: object
+      required: [subject, issuer, roles, expiresAt]
+      properties:
+        subject:
+          type: string
+          description: OIDC subject (sub) claim.
+        issuer:
+          type: string
+          format: uri
+          description: Token issuer (iss) claim.
+        preferredUsername:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: integer
+          description: Access token expiry as Unix epoch seconds.
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
