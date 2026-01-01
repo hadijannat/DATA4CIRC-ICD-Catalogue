@@ -73,7 +73,7 @@ This catalogue serves as the interface register and identifier authority for the
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
 | [ICD-18-1](../icds/data-source/ICD-18-1/ICD-18-1.md) | Data Source ↔ EDC (ERP/PLM/MES) | Database connectors, batch sync | WP5 | Draft |
-| [ICD-18-2](../icds/data-source/ICD-18-2/ICD-18-2.md) | Data Source ↔ EDC (IoT/Sensors) | MQTT, real-time telemetry | WP5 | Draft |
+| [ICD-18-2](../icds/data-source/ICD-18-2/ICD-18-2.md) | DT/DTh Application <-> Data Sources | MQTT, HTTP/REST ingestion, database connectors | WP5 | Approved |
 
 ## 4. Interface Category Definitions
 

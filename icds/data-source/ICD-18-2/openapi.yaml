@@ -1,0 +1,464 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC DT/DTh Ingestion API
+  version: 1.0.0
+  description: "HTTP/REST ingestion endpoints for ICD-18.2 (DT/DTh Application <-> Data Sources)."
+servers:
+- url: https://{dtdh-host}
+  variables:
+    dtdh-host:
+      default: dtdh.example.org
+paths:
+  /api/v1/dtdh/ingest:
+    post:
+      summary: Ingest telemetry or event payload
+      operationId: ingestPayload
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - $ref: '#/components/schemas/TelemetryMeasurement'
+              - $ref: '#/components/schemas/ProcessEvent'
+      responses:
+        '200':
+          description: Accepted payload and produced acknowledgement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionAcknowledgement'
+        '401':
+          description: Unauthorised (missing or invalid token).
+        '403':
+          description: Forbidden (insufficient role).
+        '422':
+          description: Validation failure (schema or semantic constraints).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/dtdh/health:
+    get:
+      summary: Liveness probe
+      operationId: health
+      responses:
+        '200':
+          description: Service alive.
+  /api/v1/dtdh/ready:
+    get:
+      summary: Readiness probe
+      operationId: ready
+      responses:
+        '200':
+          description: Service ready (broker and persistence reachable).
+        '503':
+          description: Service not ready.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TelemetryMeasurement:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://data4circ.eu/schemas/dtdh/TelemetryMeasurement-1.0.0.json
+      title: TelemetryMeasurement
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - message_id
+      - timestamp
+      - site_id
+      - asset_id
+      - metric
+      - quantity
+      - source
+      properties:
+        schema_version:
+          type: string
+          pattern: ^\d+\.\d+\.\d+$
+        message_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        site_id:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,64}$
+        asset_id:
+          type: string
+          format: uri
+        metric:
+          type: object
+          additionalProperties: false
+          required:
+          - metric_id
+          - semantic_id
+          properties:
+            metric_id:
+              type: string
+              pattern: ^[A-Za-z0-9._-]{1,64}$
+            semantic_id:
+              anyOf:
+              - type: string
+                pattern: ^\d{4}-1#02-[A-Z0-9]{6}#\d{3}$
+              - type: string
+                format: uri
+            name:
+              type: string
+              minLength: 1
+              maxLength: 256
+        quantity:
+          type: object
+          additionalProperties: false
+          required:
+          - value
+          - uom
+          properties:
+            value:
+              type: number
+            uom:
+              type: string
+              minLength: 1
+              maxLength: 16
+        data_quality:
+          type: object
+          additionalProperties: false
+          properties:
+            status:
+              type: string
+              enum:
+              - VALID
+              - SUSPECT
+              - INVALID
+            accuracy:
+              type: number
+            accuracy_uom:
+              type: string
+              minLength: 1
+              maxLength: 16
+        source: &id001
+          type: object
+          additionalProperties: false
+          required:
+          - source_type
+          - source_id
+          properties:
+            source_type:
+              type: string
+              enum:
+              - MQTT
+              - HTTP
+              - JDBC
+              - ODBC
+              - OPCUA
+              - FILE
+            source_id:
+              type: string
+              pattern: ^[A-Za-z0-9._-]{1,128}$
+        trace: &id002
+          type: object
+          additionalProperties: false
+          properties:
+            trace_id:
+              type: string
+              pattern: ^[0-9a-f]{32}$
+    ProcessEvent:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://data4circ.eu/schemas/dtdh/ProcessEvent-1.0.0.json
+      title: ProcessEvent
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - event_id
+      - timestamp
+      - site_id
+      - asset_id
+      - event_type
+      - event_semantic_id
+      - source
+      properties:
+        schema_version:
+          type: string
+          pattern: ^\d+\.\d+\.\d+$
+        event_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        site_id:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,64}$
+        asset_id:
+          type: string
+          format: uri
+        event_type:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,64}$
+        event_semantic_id:
+          anyOf:
+          - type: string
+            pattern: ^\d{4}-1#02-[A-Z0-9]{6}#\d{3}$
+          - type: string
+            format: uri
+        state:
+          type: object
+          additionalProperties: false
+          properties:
+            from_state:
+              type: string
+              minLength: 1
+              maxLength: 128
+            to_state:
+              type: string
+              minLength: 1
+              maxLength: 128
+        parameters:
+          type: object
+        source: *id001
+        trace: *id002
+    BatchDatasetManifest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://data4circ.eu/schemas/dtdh/BatchDatasetManifest-1.0.0.json
+      title: BatchDatasetManifest
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - dataset_id
+      - site_id
+      - created_at
+      - file_format
+      - media_type
+      - storage_uri
+      - checksum_sha256
+      - size_bytes
+      - source
+      properties:
+        schema_version:
+          type: string
+          pattern: ^\d+\.\d+\.\d+$
+        dataset_id:
+          type: string
+          format: uuid
+        site_id:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,64}$
+        asset_id:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        time_range:
+          type: object
+          additionalProperties: false
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        file_format:
+          type: string
+          enum:
+          - CSV
+          - Parquet
+          - Avro
+          - HDF5
+          - NetCDF
+          - JSON
+        media_type:
+          type: string
+          minLength: 3
+          maxLength: 128
+        storage_uri:
+          type: string
+          format: uri
+        checksum_sha256:
+          type: string
+          pattern: ^[0-9a-fA-F]{64}$
+        size_bytes:
+          type: integer
+          minimum: 0
+        record_count:
+          type: integer
+          minimum: 0
+        schema_ref:
+          type: string
+          format: uri
+        compression:
+          type: string
+          enum:
+          - none
+          - gzip
+          - zstd
+          - snappy
+        source: *id001
+    IngestionAcknowledgement:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://data4circ.eu/schemas/dtdh/IngestionAcknowledgement-1.0.0.json
+      title: IngestionAcknowledgement
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - ack_id
+      - message_id
+      - status
+      - ingested_at
+      - payload_checksum_sha256
+      properties:
+        schema_version:
+          type: string
+          pattern: ^\d+\.\d+\.\d+$
+        ack_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - ACCEPTED
+          - REJECTED
+          - DUPLICATE
+        ingested_at:
+          type: string
+          format: date-time
+        payload_checksum_sha256:
+          type: string
+          pattern: ^[0-9a-fA-F]{64}$
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+    ErrorMessage:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://data4circ.eu/schemas/dtdh/ErrorMessage-1.0.0.json
+      title: ErrorMessage
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - error_id
+      - timestamp
+      - severity
+      - error_code
+      - error_message
+      - source_topic
+      - retryable
+      properties:
+        schema_version:
+          type: string
+          pattern: ^\d+\.\d+\.\d+$
+        error_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        severity:
+          type: string
+          enum:
+          - ERROR
+          - WARN
+        error_code:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,64}$
+        error_message:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        source_topic:
+          type: string
+          minLength: 1
+          maxLength: 512
+        source_message_id:
+          type: string
+          format: uuid
+        payload_checksum_sha256:
+          type: string
+          pattern: ^[0-9a-fA-F]{64}$
+        retryable:
+          type: boolean
+        correlation_id:
+          type: string
+          minLength: 1
+          maxLength: 256
+        details:
+          type: object
+    ClientStatus:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $id: https://data4circ.eu/schemas/dtdh/ClientStatus-1.0.0.json
+      title: ClientStatus
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - client_id
+      - site_id
+      - status
+      - timestamp
+      properties:
+        schema_version:
+          type: string
+          pattern: ^\d+\.\d+\.\d+$
+        client_id:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,128}$
+        site_id:
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,64}$
+        status:
+          type: string
+          enum:
+          - ONLINE
+          - OFFLINE
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 256
+    ProblemDetails:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      title: ProblemDetails
+      type: object
+      additionalProperties: true
+      required:
+      - type
+      - title
+      - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errors:
+          type: array
+          items:
+            type: string

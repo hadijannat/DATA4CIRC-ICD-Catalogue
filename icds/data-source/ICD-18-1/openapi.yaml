@@ -1,0 +1,351 @@
+openapi: 3.1.2
+info:
+  title: DATA4CIRC ICD-18.1 Ingestion API
+  version: "1.0"
+  description: >
+    Product and material data acquisition API for submitting ingestion events
+    that are transformed into Asset Administration Shell (AAS) submodel updates.
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host:
+        default: dpp-aas.local
+paths:
+  /ingestion/events:
+    post:
+      operationId: submitIngestionEvent
+      summary: Submit ingestion event
+      security:
+        - openId: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestionEventEnvelope"
+      responses:
+        "202":
+          description: Accepted for asynchronous processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionAcceptedResponse"
+        "400":
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "401":
+          description: Unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "409":
+          description: Idempotency conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "415":
+          description: Unsupported media type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: Dependency unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /ingestion/jobs/{jobId}:
+    get:
+      operationId: getIngestionJobStatus
+      summary: Retrieve ingestion job status
+      security:
+        - openId: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionJobStatus"
+        "404":
+          description: Job not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /health:
+    get:
+      operationId: health
+      summary: Service health endpoint
+      responses:
+        "200":
+          description: Healthy
+
+components:
+  securitySchemes:
+    openId:
+      type: openIdConnect
+      openIdConnectUrl: https://keycloak.local/realms/data4circ/.well-known/openid-configuration
+
+  schemas:
+    IngestionEventEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - messageId
+        - eventType
+        - tenantId
+        - sourceSystem
+        - occurredAt
+        - payload
+      properties:
+        schemaVersion:
+          type: string
+          pattern: "^[0-9]+\\.[0-9]+$"
+        messageId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum:
+            - ProductMasterUpsert
+            - BOMUpsert
+            - MaterialCompositionUpsert
+            - DocumentUpsert
+        tenantId:
+          type: string
+        sourceSystem:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          format: uuid
+        payload:
+          oneOf:
+            - $ref: "#/components/schemas/ProductMasterPayload"
+            - $ref: "#/components/schemas/BOMPayload"
+            - $ref: "#/components/schemas/MaterialCompositionPayload"
+            - $ref: "#/components/schemas/DocumentPayload"
+
+    IngestionAcceptedResponse:
+      type: object
+      required: [jobId, status, statusUrl, receivedAt]
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [Accepted]
+        statusUrl:
+          type: string
+        receivedAt:
+          type: string
+          format: date-time
+
+    IngestionJobStatus:
+      type: object
+      required: [jobId, status, updatedAt]
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [Accepted, Running, Succeeded, Failed]
+        updatedAt:
+          type: string
+          format: date-time
+        errorMessage:
+          type: string
+
+    ProductMasterPayload:
+      type: object
+      required: [productId, productVersion, productName]
+      properties:
+        productId:
+          type: string
+        productVersion:
+          type: string
+        productName:
+          type: string
+        manufacturerName:
+          type: string
+
+    BOMPayload:
+      type: object
+      required: [productId, bomId, items]
+      properties:
+        productId:
+          type: string
+        bomId:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            required: [componentId, quantity]
+            properties:
+              componentId:
+                type: string
+              quantity:
+                type: number
+              unit:
+                type: string
+
+    MaterialCompositionPayload:
+      type: object
+      required: [productId, materials]
+      properties:
+        productId:
+          type: string
+        materials:
+          type: array
+          items:
+            type: object
+            required: [materialId, materialName, mass]
+            properties:
+              materialId:
+                type: string
+              materialName:
+                type: string
+              mass:
+                type: object
+                required: [value, unit]
+                properties:
+                  value:
+                    type: number
+                  unit:
+                    type: string
+              recycledContent:
+                type: object
+                properties:
+                  value:
+                    type: number
+                  unit:
+                    type: string
+              substances:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    substanceName:
+                      type: string
+                    casNumber:
+                      type: string
+                    massFraction:
+                      type: number
+
+    DocumentPayload:
+      type: object
+      required: [productId, documents]
+      properties:
+        productId:
+          type: string
+        documents:
+          type: array
+          items:
+            type: object
+            required: [documentId, documentType, mediaType, sha256]
+            properties:
+              documentId:
+                type: string
+              documentType:
+                type: string
+              mediaType:
+                type: string
+              sha256:
+                type: string
+
+    IngestionErrorEnvelope:
+      type: object
+      required: [errorCode, errorMessage, originalMessageId, originalTopic]
+      properties:
+        errorCode:
+          type: string
+        errorMessage:
+          type: string
+        validationErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+        originalMessageId:
+          type: string
+          format: uuid
+        originalTopic:
+          type: string
+
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string

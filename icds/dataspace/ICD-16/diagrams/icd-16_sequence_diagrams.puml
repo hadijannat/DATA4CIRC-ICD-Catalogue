@@ -1,0 +1,60 @@
+@startuml
+title ICD-16 - Governed Egress and Ingress
+
+participant "LCA Application" as LCA
+participant "SPIP Agent" as AG
+participant "Identity Provider (Keycloak)" as IDP
+participant "SPIP Platform" as PL
+participant "SPIP Key Vault" as KV
+
+LCA -> AG: POST /envelopes/egress/encrypt
+AG -> IDP: Validate JWT (JWKS)
+AG -> PL: Register/validate policy + request key
+PL -> KV: Retrieve key material
+KV --> PL: key material
+PL --> AG: keyId + context
+AG -> AG: Encrypt payload (AES-256-GCM) + ABE key wrap
+AG -> PL: Emit audit event
+AG --> LCA: SPIPEnvelope
+
+LCA -> AG: POST /envelopes/ingress/decrypt
+AG -> IDP: Validate JWT (JWKS)
+AG -> PL: Retrieve policy + request key
+PL -> KV: Retrieve key material
+KV --> PL: key material
+PL --> AG: key material
+AG -> AG: Evaluate policy + decrypt
+AG -> PL: Emit audit event
+AG --> LCA: Plaintext payload
+
+@enduml
+
+@startuml
+title ICD-16 - Informative Overview
+
+participant "LCA Application" as LCA
+participant "SPIP Agent" as AG
+participant "Identity Provider (Keycloak)" as IDP
+participant "SPIP Platform" as PL
+participant "SPIP Key Vault" as KV
+
+LCA -> AG: EncryptEgress
+AG -> IDP: Validate JWT (JWKS)
+AG -> PL: Register policy + request key
+PL -> KV: Retrieve key material
+KV --> PL: key material
+PL --> AG: keyId + context
+AG -> AG: Encrypt payload + ABE key wrap
+AG -> PL: Emit audit event
+AG --> LCA: SPIPEnvelope
+
+LCA -> AG: DecryptIngress
+AG -> IDP: Validate JWT (JWKS)
+AG -> PL: Retrieve policy + request key
+PL -> KV: Retrieve key material
+KV --> PL: key material
+PL --> AG: key material
+AG -> AG: Policy evaluation + decrypt
+AG -> PL: Emit audit event
+AG --> LCA: Plaintext
+@enduml

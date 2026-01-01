@@ -126,7 +126,7 @@ For HTTP/REST interfaces, error handling uses standard HTTP status codes and Pro
 | **Error Topic** | Not applicable (interface uses HTTP/REST and webhooks). |
 | **DLQ Strategy** | Not applicable (interface uses HTTP/REST and webhooks). |
 | **Error Payload Schema** | Not applicable (interface uses HTTP/REST and webhooks). |
-| **Retry Policy** | Not applicable (interface uses HTTP/REST and webhooks). |
+| **Retry Policy** | Provider retries webhook delivery with exponential backoff on transient failures; consumer-side idempotency required. |
 
 ---
 
@@ -384,7 +384,7 @@ Content-Type: application/json
 | **Direction** | DT/DTh Application to LCA Application (push notification). |
 | **QoS Level** | At-least-once delivery semantics (provider retry on transient failures). |
 | **Trigger Condition** | Simulation job status change to COMPLETED or FAILED. |
-| **Payload Format** | application/json; CloudEvents v1.0 envelope; schema: SimulationJobStateChangedEvent. |
+| **Payload Format** | application/cloudevents+json; CloudEvents v1.0 envelope; schema: SimulationJobStateChangedEvent. |
 | **Retention** | Non-retained. |
 | Signature Header | X-DATA4CIRC-Signature: HMAC-SHA256 over raw request body. |
 | Replay Protection | Event id (UUID) and event time fields enable consumer-side de-duplication and replay detection. |
@@ -392,7 +392,7 @@ Content-Type: application/json
 
 ```http
 POST https://lca.api.data4circ.eu/webhooks/icd13 HTTP/1.1
-Content-Type: application/json
+Content-Type: application/cloudevents+json
 X-DATA4CIRC-Signature: sha256=4a0f2b1c... (HMAC-SHA256)
 
 {
@@ -427,7 +427,7 @@ X-DATA4CIRC-Signature: sha256=4a0f2b1c... (HMAC-SHA256)
 | SimulationJobRequest.timeRange.to | string | date-time | ISO 8601 / RFC 3339 | Y | Exclusive end timestamp of the simulation window (UTC). |
 | SimulationJobRequest.requestedMetrics[] | array | N/A | MetricDefinition.metricId namespace | Y | List of metric identifiers requested for computation. |
 | SimulationJobRequest.granularity | string | duration | ISO 8601 duration | N | Aggregation granularity for time-series metrics (e.g., PT1M). |
-| SimulationJobRequest.aggregation | string (enum) | N/A | N/A | N | Aggregation function: SUM | AVG | MIN | MAX. |
+| SimulationJobRequest.aggregation | string (enum) | N/A | N/A | N | Aggregation function: SUM, AVG, MIN, MAX. |
 | SimulationJobRequest.webhookSubscriptionId | string | uuid | N/A | N | Webhook subscription identifier used for job state notifications. |
 | SimulationJobCreated.jobId | string | uuid | N/A | Y | Server-generated simulation job identifier. |
 | SimulationJobCreated.status | string (enum) | N/A | N/A | Y | Initial job status: QUEUED. |
@@ -435,7 +435,7 @@ X-DATA4CIRC-Signature: sha256=4a0f2b1c... (HMAC-SHA256)
 | SimulationJobCreated.links.status | string | uri | N/A | Y | Absolute URL for polling job status. |
 | SimulationJobCreated.links.result | string | uri | N/A | Y | Absolute URL for retrieving simulation result. |
 | SimulationJobStatus.jobId | string | uuid | N/A | Y | Simulation job identifier. |
-| SimulationJobStatus.status | string (enum) | N/A | N/A | Y | Job status: QUEUED | RUNNING | COMPLETED | FAILED | CANCELLED | EXPIRED. |
+| SimulationJobStatus.status | string (enum) | N/A | N/A | Y | Job status: QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, EXPIRED. |
 | SimulationJobStatus.progress | number | ratio (0..1) | N/A | N | Normalised progress indicator. |
 | SimulationJobStatus.createdAt | string | date-time | ISO 8601 / RFC 3339 | Y | Creation timestamp. |
 | SimulationJobStatus.startedAt | string | date-time | ISO 8601 / RFC 3339 | N | Execution start timestamp. |
@@ -456,8 +456,8 @@ X-DATA4CIRC-Signature: sha256=4a0f2b1c... (HMAC-SHA256)
 | SimulationResult.generatedAt | string | date-time | ISO 8601 / RFC 3339 | Y | Result generation timestamp. |
 | LCIFlow.flowId | string | N/A | Namespaced identifier | Y | Flow identifier. |
 | LCIFlow.flowName | string | N/A | N/A | N | Human-readable flow name. |
-| LCIFlow.flowType | string (enum) | N/A | N/A | Y | Flow type: MATERIAL | ENERGY | WATER | WASTE | EMISSION | OTHER. |
-| LCIFlow.direction | string (enum) | N/A | N/A | Y | Flow direction: INPUT | OUTPUT. |
+| LCIFlow.flowType | string (enum) | N/A | N/A | Y | Flow type: MATERIAL, ENERGY, WATER, WASTE, EMISSION, OTHER. |
+| LCIFlow.direction | string (enum) | N/A | N/A | Y | Flow direction: INPUT, OUTPUT. |
 | LCIFlow.amount | object | Quantity | QUDT | Y | Flow amount expressed as Quantity. |
 | LCIFlow.location | string | ISO 3166-1 alpha-2 | N/A | N | Geographical location code associated with the flow. |
 | LCIFlow.category | string | N/A | N/A | N | Optional category label for alignment with external vocabularies. |
@@ -501,7 +501,7 @@ X-DATA4CIRC-Signature: sha256=4a0f2b1c... (HMAC-SHA256)
 | SimulationJobStateChangedEvent.datacontenttype | string | N/A | CloudEvents | N | Event data content type. |
 | SimulationJobStateChangedEvent.time | string | date-time | CloudEvents / ISO 8601 | Y | Event timestamp. |
 | SimulationJobStateChangedEvent.data.jobId | string | uuid | N/A | Y | Simulation job identifier. |
-| SimulationJobStateChangedEvent.data.status | string (enum) | N/A | N/A | Y | Job terminal status: COMPLETED | FAILED. |
+| SimulationJobStateChangedEvent.data.status | string (enum) | N/A | N/A | Y | Job terminal status: COMPLETED, FAILED. |
 | SimulationJobStateChangedEvent.data.result | string | uri | N/A | N | Result URL when status equals COMPLETED. |
 | SimulationJobStateChangedEvent.data.error | object | ProblemDetails | RFC 9457 | N | Problem details when status equals FAILED. |
 | ProblemDetails.type | string | uri | RFC 9457 | Y | Problem type URI. |
@@ -2124,17 +2124,17 @@ Test cases for ICD-13 interface verification are defined in Table C-1.
 
 | Check | Criterion | Section |
 |-------|----------|---------|
-| ☑ | Units of measure specified for all numerical fields | Section 6.1 |
-| ☑ | Semantic IDs (IRDIs) provided for AAS-compliant fields | Section 6.1 |
-| ☑ | Environment variables listed for DevOps deployment | Section 9.5 |
-| ☑ | Circuit breaker thresholds defined for resilience | Section 4.2 |
-| ☑ | PII fields flagged and retention policies defined | Section 6.3 |
+| Yes | Units of measure specified for all numerical fields | Section 6.1 |
+| Yes | Semantic IDs (IRDIs) provided for AAS-compliant fields | Section 6.1 |
+| Yes | Environment variables listed for DevOps deployment | Section 9.5 |
+| Yes | Circuit breaker thresholds defined for resilience | Section 4.2 |
+| Yes | PII fields flagged and retention policies defined | Section 6.3 |
 | N/A | ODRL policies defined for dataspace interfaces | Section 7.4 |
 | N/A | MQTT topics, QoS, and LWT defined for IoT interfaces | Section 5.3, 9.4 |
-| ☑ | Error handling appropriate for protocol (RFC 9457 or DLQ) | Section 2.3 |
-| ☑ | Health check mechanism defined (HTTP endpoint or MQTT LWT) | Section 9.4 |
-| ☑ | Interface dependencies and versioning documented | Section 1.4 |
-| ☑ | British English and IEEE style followed throughout | All sections |
-| ☑ | No subjunctive mood, personal pronouns, or filler words | All sections |
-| ☑ | Abbreviations defined once and listed in Section 3 | Section 3 |
-| ☑ | Performance targets use specific numerical values | Section 8 |
+| Yes | Error handling appropriate for protocol (RFC 9457 or DLQ) | Section 2.3 |
+| Yes | Health check mechanism defined (HTTP endpoint or MQTT LWT) | Section 9.4 |
+| Yes | Interface dependencies and versioning documented | Section 1.4 |
+| Yes | British English and IEEE style followed throughout | All sections |
+| Yes | No subjunctive mood, personal pronouns, or filler words | All sections |
+| Yes | Abbreviations defined once and listed in Section 3 | Section 3 |
+| Yes | Performance targets use specific numerical values | Section 8 |

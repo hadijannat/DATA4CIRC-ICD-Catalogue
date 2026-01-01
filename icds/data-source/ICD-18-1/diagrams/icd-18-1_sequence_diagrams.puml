@@ -1,0 +1,72 @@
+@startuml
+title ICD-18.1 - Scheduled Database Extraction
+
+participant "Scheduler" as S
+participant "Connector Edge Adapter" as C
+database "Data Source DB" as DB
+participant "Validation Service" as V
+participant "AAS Mapping Service" as M
+participant "AAS Server" as A
+database "Audit/Job Store" as J
+
+S -> C : Trigger extraction (poll interval)
+C -> DB : Execute incremental query (watermark)
+DB --> C : Result set
+C -> V : Validate records + mapping rules
+V --> C : Validation result
+C -> M : Transform to AAS submodel update
+M -> A : Apply update (AAS Part 2 HTTP/REST API)
+A --> M : 200 OK / 201 Created
+M -> J : Persist audit event + watermark
+@enduml
+
+@startuml
+title ICD-18.1 - Push Ingestion (HTTPS/REST)
+
+participant "Data Source System" as DS
+participant "Ingestion API" as API
+database "Job Store" as J
+participant "Validation Service" as V
+participant "AAS Mapping Service" as M
+participant "AAS Server" as A
+
+DS -> API : POST /api/v1/ingestion/events
+(IngestionEventEnvelope)
+Idempotency-Key
+API -> J : Create job (Accepted)
+API --> DS : 202 Accepted (jobId)
+
+API -> V : Validate payload (schema + rules)
+V --> API : Validation result
+API -> M : Transform to AAS submodel update
+M -> A : Apply update (AAS Part 2 API)
+A --> M : 200 OK
+M -> J : Mark job Succeeded
+
+DS -> API : GET /api/v1/ingestion/jobs/{jobId}
+API --> DS : 200 OK (Succeeded)
+@enduml
+
+@startuml
+title ICD-18.1 - Event Ingestion (MQTT)
+
+participant "Data Source System" as DS
+participant "MQTT Broker" as B
+participant "MQTT Subscriber (DPP/AAS)" as S
+participant "Validation Service" as V
+participant "AAS Mapping Service" as M
+participant "AAS Server" as A
+database "Audit Store" as J
+
+DS -> B : PUBLISH .../events (QoS 1)
+messageId
+B -> S : DELIVER .../events (QoS 1)
+S -> V : Validate payload
+V --> S : Validation result
+S -> M : Transform to AAS update
+M -> A : Apply update
+A --> M : 200 OK
+M -> J : Persist audit event
+S -> B : PUBLISH .../acks (QoS 1)
+messageId,status
+@enduml

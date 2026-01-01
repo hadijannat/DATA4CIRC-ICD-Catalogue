@@ -55,7 +55,7 @@ The DPP/AAS Application operates in the application layer of an organisational d
 
 | Attribute | Specification |
 |-----------|---------------|
-| **Prerequisites** | Keycloak Identity and Access Management (IAM) with OpenID Connect (OIDC) reachable; ICD-6 (SPIP Platform <-> SPIP Agent) operational; Transport Layer Security (TLS) trust anchors installed; network route from DPP/AAS Application to SPIP Agent base URL; time synchronisation service for token validation. |
+| **Prerequisites** | Keycloak Identity and Access Management (IAM) with OpenID Connect (OIDC) reachable; ICD-6 (SPIP Platform <-> SPIP Agent) operational; Transport Layer Security (TLS) trust anchors installed; network route from DPP/AAS Application to SPIP Agent base Uniform Resource Locator (URL); time synchronisation service for token validation. |
 | **Versioning Strategy** | Uniform Resource Identifier (URI)-based semantic versioning using /api/v{major}. Backwards-compatible changes increment minor version within the same base path. Breaking changes use a new major version base path. |
 | **Deprecation Policy** | Minimum 180 d deprecation period. Deprecated endpoints emit a deprecation response header (X-Deprecated-At: YYYY-MM-DD) until removal. |
 | **Downstream Dependents** | DPP/AAS governed data exchange workflows using ICD-5 (SPIP Agent <-> Dataspace Connector) and ICD-17 (Dataspace Connector <-> Dataspace Connector). |
@@ -63,6 +63,8 @@ The DPP/AAS Application operates in the application layer of an organisational d
 ## 2. Functional Description
 
 ### 2.1 Functional Capabilities
+
+Functional capabilities are traced to System Requirements Specification (SRS) identifiers.
 
 | ID | Capability | Description | SRS Reference |
 |----|------------|-------------|---------------|
@@ -79,11 +81,11 @@ Two synchronous request-response interaction patterns are defined. Governed egre
 
 #### 2.3.1 HTTP/REST Error Handling
 
-For HTTP/REST interfaces, error responses shall conform to RFC 9457 (Problem Details for HTTP APIs).
+For Hypertext Transfer Protocol (HTTP) Representational State Transfer (REST) interfaces, error responses shall conform to Request for Comments (RFC) 9457 (Problem Details for HTTP Application Programming Interfaces (APIs)).
 
 | HTTP Status | Condition | Recovery Action |
 |-------------|-----------|-----------------|
-| 400 Bad Request | Request schema validation failure (malformed JSON, missing required fields, invalid base64 encoding, invalid policy reference syntax). | Correct request payload and retry. Client-side validation required prior to submission. |
+| 400 Bad Request | Request schema validation failure (malformed JavaScript Object Notation (JSON), missing required fields, invalid base64 encoding, invalid policy reference syntax). | Correct request payload and retry. Client-side validation required prior to submission. |
 | 401 Unauthorized | Missing, expired, or invalid bearer token; token signature validation failure. | Acquire a valid access token from the identity provider and retry. |
 | 403 Forbidden | Authenticated subject lacks the required role or attribute context for the requested operation. | Assign required roles or attributes in the identity provider or use an authorised subject. |
 | 404 Not Found | Referenced policy identifier or resource identifier is not registered in SPIP Platform. | Verify policy identifier and ensure policy registration in SPIP Platform. |
@@ -130,18 +132,19 @@ Not applicable. ICD-14 specifies an HTTP/REST interface and does not define mess
 | RFC | Request for Comments |
 | SPIP | Secure Policy Information Point |
 | SRS | System Requirements Specification |
+| TCP | Transmission Control Protocol |
 | TLS | Transport Layer Security |
 | URI | Uniform Resource Identifier |
 | URL | Uniform Resource Locator |
 | UUID | Universally Unique Identifier |
 | YAML | YAML Ain't Markup Language |
-| mTLS | mutual Transport Layer Security |
+| mTLS | Mutual Transport Layer Security |
 
 ## 4. Communication Protocol
 
 ### 4.1 Protocol Stack
 
-The interface uses an Application Programming Interface (API) described with OpenAPI and exchanges Hypertext Transfer Protocol (HTTP) Representational State Transfer (REST) messages with JavaScript Object Notation (JSON) payloads. Transport security uses Hypertext Transfer Protocol Secure (HTTPS) over TLS 1.3. Access control uses OAuth 2.0 bearer JSON Web Token (JWT) access tokens issued via OpenID Connect (OIDC).
+The interface is described with OpenAPI and exchanges HTTP REST messages with JSON payloads. Transport security uses Hypertext Transfer Protocol Secure (HTTPS) over TLS 1.3. Access control uses OAuth 2.0 bearer JSON Web Token (JWT) access tokens issued via OIDC. Policy constraints use Open Digital Rights Language (ODRL) 2.2.
 
 | Layer | Protocol | Specification |
 |-------|----------|---------------|
@@ -160,12 +163,12 @@ The interface uses an Application Programming Interface (API) described with Ope
 |-----------|-------|
 | Base URL / Broker | https://spip-agent.{organisationFQDN}/api/v1 |
 | Port | 8443 (HTTPS) |
-| Network Zone | Organisation internal network (Kubernetes cluster or secured DMZ segment) |
+| Network Zone | Organisation internal network (Kubernetes cluster or secured demilitarised zone segment) |
 | Connection Timeout | 5 s |
 | Read Timeout | 30 s |
 | Retry Policy | 3 retries with exponential backoff (1 s, 2 s, 4 s) and randomised jitter; idempotency key preserved across retries |
 | Circuit Breaker | Open after 5 consecutive failures; half-open after 30 s; close after 3 consecutive successes |
-| Firewall Rules | Allow inbound TCP 8443 from DPP/AAS Application network segment; allow outbound TCP 443 from SPIP Agent to SPIP Platform endpoint |
+| Firewall Rules | Allow inbound Transmission Control Protocol (TCP) 8443 from DPP/AAS Application network segment; allow outbound TCP 443 from SPIP Agent to SPIP Platform endpoint |
 
 ## 5. API Specification
 
@@ -321,6 +324,8 @@ Not applicable. ICD-14 specifies a synchronous HTTP/REST interface.
 
 ### 6.1 Data Model
 
+Semantic identifiers use International Registration Data Identifier (IRDI) notation. Identifier fields use Universally Unique Identifier (UUID) format where specified.
+
 #### 6.1.1 EncryptEgressRequest
 
 | Field | Type | Unit/Format | Semantic ID (IRDI) | Req | Description |
@@ -429,9 +434,11 @@ Not applicable. ICD-14 specifies a synchronous HTTP/REST interface.
 
 ### 6.2 Semantic Mappings
 
-Cryptographic envelope metadata fields use IETF-defined syntax for identifiers, timestamps, and encodings. Domain payload semantics remain defined by the IDTA AAS information model and DPP content profiles. ICD-14 introduces no additional semantic identifiers for domain payload content. Policy expression semantics use the ABE policy grammar defined in Section 6.1.
+Cryptographic envelope metadata fields use IETF-defined syntax for identifiers, timestamps, and encodings. Domain payload semantics remain defined by the Industrial Digital Twin Association (IDTA) AAS information model and DPP content profiles. ICD-14 introduces no additional semantic identifiers for domain payload content. Policy expression semantics use the ABE policy grammar defined in Section 6.1.
 
 ### 6.3 Data Governance and Compliance
+
+Personally Identifiable Information (PII) classification and retention are summarised in the data governance and compliance table.
 
 | Data Entity | PII (Y/N) | Classification | Retention Period |
 |-------------|-----------|----------------|------------------|
@@ -447,10 +454,11 @@ Cryptographic envelope metadata fields use IETF-defined syntax for identifiers, 
 
 ### 7.1 Authentication
 
-| Mechanism | OAuth 2.0 and OpenID Connect with bearer access tokens |
-|-----------|---------------------------------------------------------|
-| Identity Provider | Keycloak (IAM / DAPS) |
-| Token Type | JWT (signed JWS) |
+| Attribute | Specification |
+|-----------|---------------|
+| Mechanism | OAuth 2.0 and OIDC with bearer access tokens |
+| Identity Provider | Keycloak (IAM) |
+| Token Type | JWT |
 | Token Lifetime | 3600 s (Keycloak realm configuration) |
 
 ### 7.2 Authorisation
@@ -750,6 +758,8 @@ networks:
 
 ## 11. Acceptance Criteria
 
+Acceptance Criteria (AC) are listed in this section.
+
 | AC ID | Criterion | Test Method | SRS Ref |
 |-------|-----------|-------------|---------|
 | AC-01 | POST /api/v1/egress/encrypt returns HTTP 200 and a CryptoEnvelope for valid token and policyId. | Integration | SRS-1-4 |
@@ -824,6 +834,8 @@ AGENT --> APP: DecryptIngressResponse
 ```
 
 ## Annex B: Complete API Schema
+
+Annex B provides the complete OpenAPI schema in YAML Ain't Markup Language (YAML).
 
 ```yaml
 openapi: 3.1.0

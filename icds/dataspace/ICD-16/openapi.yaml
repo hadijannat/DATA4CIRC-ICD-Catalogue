@@ -1,0 +1,588 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-16 - LCA Application <-> SPIP Agent API
+  version: 1.0.0
+  description: >
+    Interface contract for policy-governed cryptographic processing between the
+    Life Cycle Assessment (LCA) application and the Secure Policy Information Point (SPIP) agent.
+servers:
+  - url: https://{spip-agent-host}:8443/spip-agent/api/v1
+    variables:
+      spip-agent-host:
+        default: spip-agent
+security:
+  - bearerAuth: []
+tags:
+  - name: GovernedEgress
+  - name: GovernedIngress
+  - name: Policy
+  - name: Operations
+
+paths:
+  /envelopes/egress/encrypt:
+    post:
+      tags: [GovernedEgress]
+      summary: Encrypt payload for governed egress
+      operationId: encryptEgress
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptEgressRequest'
+      responses:
+        '200':
+          description: SPIP envelope created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncryptEgressResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '503':
+          $ref: '#/components/responses/Problem503'
+
+  /envelopes/ingress/decrypt:
+    post:
+      tags: [GovernedIngress]
+      summary: Decrypt SPIP envelope for governed ingress
+      operationId: decryptIngress
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecryptIngressRequest'
+      responses:
+        '200':
+          description: Plaintext payload returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecryptIngressResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '503':
+          $ref: '#/components/responses/Problem503'
+
+  /policies:
+    post:
+      tags: [Policy]
+      summary: Register or validate usage policy
+      operationId: createPolicy
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCreateRequest'
+      responses:
+        '201':
+          description: Policy registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyCreateResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '503':
+          $ref: '#/components/responses/Problem503'
+
+  /policies/{policyId}:
+    get:
+      tags: [Policy]
+      summary: Retrieve usage policy
+      operationId: getPolicy
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Policy identifier (URN form).
+      responses:
+        '200':
+          description: Policy returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyObject'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '500':
+          $ref: '#/components/responses/Problem500'
+
+  /health:
+    get:
+      tags: [Operations]
+      summary: Liveness probe
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: Liveness ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags: [Operations]
+      summary: Readiness probe
+      operationId: ready
+      security: []
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          $ref: '#/components/responses/Problem503'
+
+  /metrics:
+    get:
+      tags: [Operations]
+      summary: Prometheus metrics
+      operationId: metrics
+      responses:
+        '200':
+          description: Metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '503':
+          $ref: '#/components/responses/Problem503'
+
+components:
+  parameters:
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Correlation identifier for distributed tracing.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Idempotency key for safe retries.
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Problem400:
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem401:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem403:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem404:
+      description: Not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem409:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem413:
+      description: Payload too large
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem429:
+      description: Too many requests
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem500:
+      description: Internal error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem503:
+      description: Service unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    EncryptEgressRequest:
+      type: object
+      additionalProperties: false
+      required: [correlationId, asset, payload, usagePolicy, encryptionProfile]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        asset:
+          $ref: '#/components/schemas/AssetMetadata'
+        payload:
+          $ref: '#/components/schemas/PayloadDescriptor'
+        usagePolicy:
+          $ref: '#/components/schemas/PolicyObject'
+        encryptionProfile:
+          $ref: '#/components/schemas/EncryptionProfile'
+        audit:
+          $ref: '#/components/schemas/AuditContext'
+
+    EncryptEgressResponse:
+      type: object
+      additionalProperties: false
+      required: [envelopeId, correlationId, assetId, encryption, ciphertext, digest, issuedAt]
+      properties:
+        envelopeId:
+          type: string
+          format: uri
+        correlationId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+        encryption:
+          $ref: '#/components/schemas/EncryptionMetadata'
+        ciphertext:
+          $ref: '#/components/schemas/CiphertextBlob'
+        digest:
+          $ref: '#/components/schemas/Digest'
+        usagePolicyRef:
+          type: string
+          format: uri
+        issuedAt:
+          type: string
+          format: date-time
+        ttlSeconds:
+          type: integer
+          minimum: 0
+        payloadSizeBytes:
+          type: integer
+          minimum: 0
+        auditEventId:
+          type: string
+          format: uri
+
+    DecryptIngressRequest:
+      type: object
+      additionalProperties: false
+      required: [correlationId, envelope]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        envelope:
+          $ref: '#/components/schemas/SpipEnvelope'
+
+    DecryptIngressResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, assetId, payload]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+        payload:
+          $ref: '#/components/schemas/PayloadInline'
+        auditEventId:
+          type: string
+          format: uri
+
+    PolicyCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [usagePolicy]
+      properties:
+        usagePolicy:
+          $ref: '#/components/schemas/PolicyObject'
+        policyId:
+          type: string
+          format: uri
+
+    PolicyCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [policyId, status]
+      properties:
+        policyId:
+          type: string
+          format: uri
+        status:
+          type: string
+          enum: [registered, validated]
+
+    AssetMetadata:
+      type: object
+      additionalProperties: false
+      required: [assetId, contentType, producerId, classification]
+      properties:
+        assetId:
+          type: string
+        contentType:
+          type: string
+        schema:
+          type: string
+        producerId:
+          type: string
+        classification:
+          type: string
+          enum: [public, internal, confidential, restricted]
+
+    PayloadDescriptor:
+      oneOf:
+        - $ref: '#/components/schemas/PayloadInline'
+        - $ref: '#/components/schemas/PayloadReference'
+
+    PayloadInline:
+      type: object
+      additionalProperties: false
+      required: [mode, encoding, data]
+      properties:
+        mode:
+          type: string
+          const: inline
+        encoding:
+          type: string
+          enum: [base64]
+        data:
+          type: string
+          contentEncoding: base64
+
+    PayloadReference:
+      type: object
+      additionalProperties: false
+      required: [mode, uri]
+      properties:
+        mode:
+          type: string
+          const: reference
+        uri:
+          type: string
+          format: uri
+        digest:
+          $ref: '#/components/schemas/Digest'
+
+    EncryptionProfile:
+      type: object
+      additionalProperties: false
+      required: [payloadEncryption, keyProtection, abePolicy]
+      properties:
+        payloadEncryption:
+          type: string
+          enum: [AES-256-GCM]
+        keyProtection:
+          type: string
+          enum: [ABE]
+        abePolicy:
+          type: string
+
+    EncryptionMetadata:
+      type: object
+      additionalProperties: false
+      required: [payloadEncryption, nonce, keyProtection, keyId, abePolicy]
+      properties:
+        payloadEncryption:
+          type: string
+          enum: [AES-256-GCM]
+        nonce:
+          type: string
+          contentEncoding: base64
+        keyProtection:
+          type: string
+          enum: [ABE]
+        keyId:
+          type: string
+        abePolicy:
+          type: string
+
+    CiphertextBlob:
+      type: object
+      additionalProperties: false
+      required: [encoding, data]
+      properties:
+        encoding:
+          type: string
+          enum: [base64]
+        data:
+          type: string
+          contentEncoding: base64
+
+    Digest:
+      type: object
+      additionalProperties: false
+      required: [algorithm, value]
+      properties:
+        algorithm:
+          type: string
+          enum: [SHA-256]
+        value:
+          type: string
+          pattern: '^[0-9a-fA-F]{64}$'
+
+    SpipEnvelope:
+      type: object
+      additionalProperties: false
+      required: [envelopeId, schemaVersion, correlationId, asset, ciphertext, encryption, digest, usagePolicy, issuedAt]
+      properties:
+        envelopeId:
+          type: string
+          format: uri
+        schemaVersion:
+          type: string
+        correlationId:
+          type: string
+          format: uuid
+        asset:
+          $ref: '#/components/schemas/AssetMetadata'
+        ciphertext:
+          $ref: '#/components/schemas/CiphertextBlob'
+        encryption:
+          $ref: '#/components/schemas/EncryptionMetadata'
+        digest:
+          $ref: '#/components/schemas/Digest'
+        usagePolicy:
+          $ref: '#/components/schemas/PolicyObject'
+        issuedAt:
+          type: string
+          format: date-time
+        ttlSeconds:
+          type: integer
+          minimum: 0
+        payloadSizeBytes:
+          type: integer
+          minimum: 0
+        auditEventId:
+          type: string
+          format: uri
+
+    PolicyObject:
+      type: object
+      description: ODRL policy expressed as JSON-LD object.
+
+    AuditContext:
+      type: object
+      additionalProperties: false
+      properties:
+        purpose:
+          type: string
+        requestedBy:
+          type: string
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        correlationId:
+          type: string
+          format: uuid
+        errorCode:
+          type: string
+        retryable:
+          type: boolean

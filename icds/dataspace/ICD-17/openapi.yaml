@@ -1,0 +1,559 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC ICD-17 - Dataspace Connector <-> Dataspace Connector (DSP)
+  version: "1.0"
+  description: >
+    OpenAPI specification for ICD-17. The API exposes Dataspace Protocol (DSP) 2024-1 bindings for
+    catalogue retrieval, contract negotiation, and transfer process coordination between two dataspace connectors.
+servers:
+  - url: https://{connectorFqdn}
+    description: Connector origin (well-known endpoints)
+    variables:
+      connectorFqdn:
+        default: provider.example.org
+  - url: https://{connectorFqdn}/{dspBasePath}
+    description: DSP service base (EDC default /protocol)
+    variables:
+      connectorFqdn:
+        default: provider.example.org
+      dspBasePath:
+        default: protocol
+security:
+  - oauth2ClientCredentials: []
+paths:
+  /.well-known/dspace-version:
+    get:
+      operationId: getDspVersionMetadata
+      summary: Retrieve supported DSP versions
+      responses:
+        "200":
+          description: Version metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionMetadata"
+        "401":
+          description: Unauthorised
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /catalog/request:
+    post:
+      operationId: requestCatalog
+      summary: Request provider catalogue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogRequestMessage"
+      responses:
+        "200":
+          description: DCAT catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DcatCatalog"
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /catalog/datasets/{id}:
+    get:
+      operationId: getDataset
+      summary: Retrieve dataset details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetRequestMessage"
+      responses:
+        "200":
+          description: DCAT dataset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DcatDataset"
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /negotiations/{providerPid}:
+    get:
+      operationId: getContractNegotiation
+      summary: Retrieve contract negotiation state
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contract negotiation state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractNegotiation"
+        "404":
+          description: Not found (or unauthorised)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /negotiations/request:
+    post:
+      operationId: initiateContractNegotiation
+      summary: Initiate contract negotiation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractRequestMessage"
+      responses:
+        "201":
+          description: Contract negotiation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractNegotiation"
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /negotiations/{providerPid}/request:
+    post:
+      operationId: updateContractNegotiation
+      summary: Submit updated offer
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractRequestMessage"
+      responses:
+        "201":
+          description: Contract negotiation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractNegotiation"
+  /negotiations/{providerPid}/events:
+    post:
+      operationId: postContractNegotiationEvent
+      summary: Post negotiation lifecycle event
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractNegotiationEventMessage"
+      responses:
+        "200":
+          description: Event accepted
+  /negotiations/{providerPid}/agreement/verification:
+    post:
+      operationId: verifyAgreement
+      summary: Verify contract agreement
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /negotiations/{providerPid}/termination:
+    post:
+      operationId: terminateNegotiation
+      summary: Terminate contract negotiation
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Termination accepted
+  /transfers/{providerPid}:
+    get:
+      operationId: getTransferProcess
+      summary: Retrieve transfer process state
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transfer process state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferProcess"
+        "404":
+          description: Not found (or unauthorised)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /transfers/request:
+    post:
+      operationId: initiateTransferProcess
+      summary: Initiate transfer process
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequestMessage"
+      responses:
+        "201":
+          description: Transfer process created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferProcess"
+  /transfers/{providerPid}/request:
+    post:
+      operationId: updateTransferProcess
+      summary: Submit updated transfer request
+      parameters:
+        - name: providerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequestMessage"
+      responses:
+        "201":
+          description: Transfer process updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferProcess"
+
+  # Consumer callback endpoints (consumer connector server)
+  /negotiations/offers:
+    post:
+      operationId: receiveContractOffer
+      summary: Consumer callback endpoint for contract offers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractOfferMessage"
+      responses:
+        "200":
+          description: Offer received
+  /negotiations/{consumerPid}/offers:
+    post:
+      operationId: receiveContractOfferWithPid
+      summary: Consumer callback endpoint for contract offers (consumerPid)
+      parameters:
+        - name: consumerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractOfferMessage"
+      responses:
+        "200":
+          description: Offer received
+
+  /transfers/{consumerPid}/start:
+    post:
+      operationId: receiveTransferStart
+      summary: Consumer callback endpoint for transfer start
+      parameters:
+        - name: consumerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferStartMessage"
+      responses:
+        "200":
+          description: Start received
+  /transfers/{consumerPid}/completion:
+    post:
+      operationId: receiveTransferCompletion
+      summary: Consumer callback endpoint for transfer completion
+      parameters:
+        - name: consumerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferCompletionMessage"
+      responses:
+        "200":
+          description: Completion received
+  /transfers/{consumerPid}/termination:
+    post:
+      operationId: receiveTransferTermination
+      summary: Consumer callback endpoint for transfer termination
+      parameters:
+        - name: consumerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferTerminationMessage"
+      responses:
+        "200":
+          description: Termination received
+  /transfers/{consumerPid}/suspension:
+    post:
+      operationId: receiveTransferSuspension
+      summary: Consumer callback endpoint for transfer suspension
+      parameters:
+        - name: consumerPid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferSuspensionMessage"
+      responses:
+        "200":
+          description: Suspension received
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://keycloak.example.org/realms/ds4circ/protocol/openid-connect/token
+          scopes: {}
+  schemas:
+    ProblemDetails:
+      type: object
+      description: RFC 9457 Problem Details for HTTP APIs
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+      additionalProperties: true
+
+    VersionMetadata:
+      type: object
+      required: [protocolVersions]
+      properties:
+        protocolVersions:
+          type: array
+          items:
+            type: string
+      additionalProperties: true
+
+    DspaceMessageBase:
+      type: object
+      required: ["@context", "@type"]
+      properties:
+        "@context":
+          oneOf:
+            - type: string
+              format: uri
+            - type: array
+              items:
+                type: string
+                format: uri
+        "@type":
+          type: string
+      additionalProperties: true
+
+    CatalogRequestMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+        - type: object
+          properties:
+            dspace:filter:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    DatasetRequestMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+        - type: object
+          properties:
+            dspace:dataset:
+              type: string
+              format: uri
+
+    ContractRequestMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+        - type: object
+          required: ["dspace:callbackAddress", "dspace:offer"]
+          properties:
+            dspace:callbackAddress:
+              type: string
+              format: uri
+            dspace:offer:
+              type: object
+              additionalProperties: true
+            dspace:consumerPid:
+              type: string
+
+    ContractOfferMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+        - type: object
+          properties:
+            dspace:offer:
+              type: object
+              additionalProperties: true
+            dspace:providerPid:
+              type: string
+            dspace:consumerPid:
+              type: string
+
+    ContractNegotiationEventMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+        - type: object
+          properties:
+            dspace:eventType:
+              type: string
+
+    ContractNegotiation:
+      type: object
+      properties:
+        providerPid:
+          type: string
+        consumerPid:
+          type: string
+        state:
+          type: string
+      additionalProperties: true
+
+    TransferRequestMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+        - type: object
+          required: ["dspace:callbackAddress", "dspace:agreementId", "dct:format"]
+          properties:
+            dspace:callbackAddress:
+              type: string
+              format: uri
+            dspace:agreementId:
+              type: string
+            dct:format:
+              type: string
+            dspace:consumerPid:
+              type: string
+            dspace:dataAddress:
+              type: object
+              additionalProperties: true
+
+    TransferProcess:
+      type: object
+      properties:
+        providerPid:
+          type: string
+        consumerPid:
+          type: string
+        state:
+          type: string
+      additionalProperties: true
+
+    TransferStartMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+    TransferCompletionMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+    TransferTerminationMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+    TransferSuspensionMessage:
+      allOf:
+        - $ref: "#/components/schemas/DspaceMessageBase"
+
+    DcatCatalog:
+      type: object
+      description: DCAT catalog artefact (JSON-LD)
+      additionalProperties: true
+
+    DcatDataset:
+      type: object
+      description: DCAT dataset artefact (JSON-LD)
+      additionalProperties: true
