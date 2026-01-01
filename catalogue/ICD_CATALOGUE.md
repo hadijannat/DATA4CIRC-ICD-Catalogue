@@ -46,34 +46,34 @@ This catalogue serves as the interface register and identifier authority for the
 |-------|----------------------|-------------------|-----|--------|
 | [ICD-05](../icds/governance/ICD-05/ICD-05.md) | SPIP Agent ↔ Dataspace Connector | Policy enforcement, access control | WP3 | Approved |
 | [ICD-06](../icds/governance/ICD-06/ICD-06.md) | SPIP Platform ↔ SPIP Agent | Governance services, cryptographic operations | WP3 | Approved |
-| [ICD-07](../icds/governance/ICD-07/ICD-07.md) | SPIP Agent ↔ Policy Repository | Policy retrieval, caching | WP4 | Draft |
+| [ICD-07](../icds/governance/ICD-07/ICD-07.md) | DS4CIRC Portal ↔ SPIP Platform | Governance dashboard, key management | WP3 | Approved |
 
 ### 3.3 Application Interfaces
 
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
-| [ICD-08](../icds/application/ICD-08/ICD-08.md) | DATA4CIRC Portal ↔ LCA Tool | REST API, data exchange | WP4 | Draft |
+| [ICD-08](../icds/application/ICD-08/ICD-08.md) | DPP/AAS Portal ↔ DPP/AAS Application | REST API, DPP management | WP4 | Approved |
 | [ICD-09](../icds/application/ICD-09/ICD-09.md) | DT/DTh Portal ↔ DT/DTh Application | REST API, WebSocket collaboration | WP5 | Approved |
-| [ICD-10](../icds/application/ICD-10/ICD-10.md) | DATA4CIRC Portal ↔ DT/DTh Tool | REST API, simulation data | WP4 | Draft |
-| [ICD-11](../icds/application/ICD-11/ICD-11.md) | LCA Tool ↔ DPP/AAS Tool | Data synchronisation | WP4 | Draft |
+| [ICD-10](../icds/application/ICD-10/ICD-10.md) | LCA Portal ↔ LCA Application | REST API, LCA calculation jobs | WP6 | Final |
+| [ICD-11](../icds/application/ICD-11/ICD-11.md) | DPP/AAS Application ↔ LCA Application | BOM to LCI transfer, inventory jobs | WP4 | Approved |
 | [ICD-12](../icds/application/ICD-12/ICD-12.md) | DPP/AAS Application ↔ DT/DTh Application | AAS discovery, mapping, and synchronisation metadata | WP4 / WP5 | Approved |
-| [ICD-13](../icds/application/ICD-13/ICD-13.md) | DPP/AAS Tool ↔ DT/DTh Tool | Asset state synchronisation | WP4 | Draft |
+| [ICD-13](../icds/application/ICD-13/ICD-13.md) | DT/DTh Application ↔ LCA Application | Simulation outputs, system state exchange | WP5 | Approved |
 
 ### 3.4 Dataspace Interfaces
 
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
-| [ICD-14](../icds/dataspace/ICD-14/ICD-14.md) | EDC ↔ EDC Catalog Exchange | DSP protocol, catalog queries | WP4 | Draft |
-| [ICD-15](../icds/dataspace/ICD-15/ICD-15.md) | EDC ↔ EDC Contract Negotiation | DSP protocol, contract offers | WP4 | Draft |
-| [ICD-16](../icds/dataspace/ICD-16/ICD-16.md) | EDC ↔ EDC Data Transfer | DSP protocol, data plane | WP4 | Draft |
-| [ICD-17](../icds/dataspace/ICD-17/ICD-17.md) | EDC ↔ SPIP Policy Evaluation | ODRL policies, access decisions | WP4 | Draft |
+| [ICD-14](../icds/dataspace/ICD-14/ICD-14.md) | DPP/AAS Application ↔ SPIP Agent | Governed egress/ingress, ABE encryption | WP3 | Approved |
+| [ICD-15](../icds/dataspace/ICD-15/ICD-15.md) | DT/DTh Application ↔ SPIP Agent | Governed egress/ingress, ABE encryption | WP3 | Approved |
+| [ICD-16](../icds/dataspace/ICD-16/ICD-16.md) | LCA Application ↔ SPIP Agent | Governed egress/ingress, Policy binding | WP3 | Approved |
+| [ICD-17](../icds/dataspace/ICD-17/ICD-17.md) | Dataspace Connector ↔ Dataspace Connector | Inter-organisational Data Exchange (DSP) | WP3 | Approved |
 
 ### 3.5 Data Source Interfaces
 
 | ICD-# | Interface Description | Interface Details | WP# | Status |
 |-------|----------------------|-------------------|-----|--------|
-| [ICD-18-1](../icds/data-source/ICD-18-1/ICD-18-1.md) | Data Source ↔ EDC (ERP/PLM/MES) | Database connectors, batch sync | WP5 | Draft |
-| [ICD-18-2](../icds/data-source/ICD-18-2/ICD-18-2.md) | DT/DTh Application <-> Data Sources | MQTT, HTTP/REST ingestion, database connectors | WP5 | Approved |
+| [ICD-18-1](../icds/data-source/ICD-18-1/ICD-18-1.md) | DPP/AAS Application ↔ Data Sources | Product/Material acquisition, connectors | WP4 | Under Review |
+| [ICD-18-2](../icds/data-source/ICD-18-2/ICD-18-2.md) | DT/DTh Application ↔ Data Sources | MQTT/HTTP ingestion, telemetry | WP5 | Approved |
 
 ## 4. Interface Category Definitions
 
