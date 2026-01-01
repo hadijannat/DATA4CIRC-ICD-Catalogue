@@ -137,8 +137,10 @@ jobs:
             if [ -f "$file" ] && [ -s "$file" ]; then
               echo "Checking writing style in: $file"
 
-              # Check for American English spellings
-              if grep -in "serialization\|synchronize\|authorize\|organize\|analyze\|utilize\|customize" "$file"; then
+              # Check for American English spellings in prose (exclude code blocks, HTTP status, style guide tables)
+              # Exclusions: code imports, Spring annotations, HTTP status codes, style guide examples, OpenAPI descriptions
+              if grep -in "serialization\|synchronize\|authorize\|organize\|analyze\|utilize\|customize" "$file" | \
+                 grep -v "^[0-9]*:import \|@PreAuthorize\|OAuth2Authorize\|authorizeHttpRequests\|Customizer\|\.authorize(\|401 Unauthorized\|403 Forbidden\|description: Unauthorized\|| serialization\|| synchronize"; then
                 echo "  Error: American English spelling detected (use British English)"
                 EXIT_CODE=1
               fi
