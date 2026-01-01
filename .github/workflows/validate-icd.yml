@@ -59,15 +59,20 @@ jobs:
       - name: Validate OpenAPI files
         run: |
           # Find and validate all OpenAPI specification files
-          find icds -name 'openapi.yaml' -o -name 'openapi.yml' | while read file; do
+          EXIT_CODE=0
+          for file in $(find icds -name 'openapi.yaml' -o -name 'openapi.yml'); do
             echo "Validating: $file"
             # Only validate if file has content (not empty placeholder)
             if [ -s "$file" ]; then
-              swagger-cli validate "$file" || echo "Warning: $file validation failed"
+              if ! swagger-cli validate "$file"; then
+                echo "Error: $file validation failed"
+                EXIT_CODE=1
+              fi
             else
               echo "Skipping empty file: $file"
             fi
           done
+          exit $EXIT_CODE
 
   check-required-sections:
     name: Check Required ICD Sections
@@ -85,7 +90,7 @@ jobs:
             "## 3. Abbreviations"
             "## 4. Communication Protocol"
             "## 5. API Specification"
-            "## 6. Data Structures and Semantics"
+            "## 6. Data Structures"
             "## 7. Security Requirements"
             "## 8. Performance Requirements"
             "## 9. Implementation Guidelines"
@@ -125,34 +130,39 @@ jobs:
         run: |
           # Get list of changed ICD files
           CHANGED_FILES=$(git diff --name-only origin/main...HEAD -- 'icds/**/*.md' 2>/dev/null || find icds -name 'ICD-*.md' -size +0)
-          
+
           EXIT_CODE=0
-          
+
           for file in $CHANGED_FILES; do
             if [ -f "$file" ] && [ -s "$file" ]; then
               echo "Checking writing style in: $file"
-              
-              # Check for American English spellings
-              if grep -in "serialization\|synchronize\|authorize\|organize\|analyze\|utilize\|customize" "$file"; then
-                echo "  Warning: American English spelling detected (use British English)"
+
+              # Check for American English spellings in prose (exclude code blocks, HTTP status, style guide tables)
+              # Exclusions: code imports, Spring annotations, HTTP status codes, style guide examples, OpenAPI descriptions
+              if grep -in "serialization\|synchronize\|authorize\|organize\|analyze\|utilize\|customize" "$file" | \
+                 grep -v "^[0-9]*:import \|@PreAuthorize\|OAuth2Authorize\|authorizeHttpRequests\|Customizer\|\.authorize(\|401 Unauthorized\|403 Forbidden\|description: Unauthorized\|| serialization\|| synchronize"; then
+                echo "  Error: American English spelling detected (use British English)"
+                EXIT_CODE=1
               fi
-              
+
               # Check for personal pronouns at sentence start
               if grep -in "^We \|^I \|^You \|^Our " "$file"; then
-                echo "  Warning: Personal pronouns detected"
+                echo "  Error: Personal pronouns detected"
+                EXIT_CODE=1
               fi
-              
-              # Check for subjunctive mood
-              if grep -in " could \| would \| might \| should \| maybe " "$file"; then
-                echo "  Warning: Subjunctive mood detected (use shall, is, provides)"
+
+              # Check for subjunctive mood (excluding style guide tables and quoted examples)
+              if grep -in " could \| would \| might \| maybe " "$file" | grep -v "Incorrect:\|should respond\|No subjunctive\|| shall"; then
+                echo "  Error: Subjunctive mood detected (use shall, is, provides)"
+                EXIT_CODE=1
               fi
-              
+
               # Check for em dashes
               if grep -n "—" "$file"; then
-                echo "  Warning: Em dashes detected (use commas or parentheses)"
+                echo "  Error: Em dashes detected (use commas or parentheses)"
+                EXIT_CODE=1
               fi
             fi
           done
-          
-          # Exit with warning but don't fail the build
-          exit 0
+
+          exit $EXIT_CODE
