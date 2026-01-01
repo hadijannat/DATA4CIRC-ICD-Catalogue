@@ -8,7 +8,7 @@ Generated automatically on each merge to main.
 |--------|-------|
 | Draft | 0 |
 | Under Review | 0 |
-| Approved | 5 |
+| Approved | 6 |
 | Implemented | 0 |
 | Deprecated | 0 |
 
@@ -16,6 +16,7 @@ Generated automatically on each merge to main.
 
 | Date | ICD | Author | Commit |
 |------|-----|--------|--------|
+| 2026-01-01 | ICD-06 | hadijannat | 066a32a |
 | 2026-01-01 | ICD-05 | hadijannat | 8098794 |
 | 2026-01-01 | ICD-04 | hadijannat | c329b72 |
 | 2026-01-01 | ICD-03 | hadijannat | 82b0851 |
