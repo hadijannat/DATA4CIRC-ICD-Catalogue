@@ -8,6 +8,7 @@ info:
     operations (encrypt/decrypt), policy management, and audit query capabilities.
   license:
     name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 servers:
   - url: https://{host}:{port}
     variables:

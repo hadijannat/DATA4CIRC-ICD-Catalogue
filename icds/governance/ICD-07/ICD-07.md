@@ -741,7 +741,6 @@ servers:
   variables:
     spip_host:
       default: spip.example.internal
-      description: SPIP Platform host name.
 security:
 - oauth2:
   - spip.read

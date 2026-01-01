@@ -850,7 +850,6 @@ servers:
     variables:
       organisationFQDN:
         default: example.org
-        description: Organisation fully qualified domain name.
 paths:
   /egress/encrypt:
     post:
