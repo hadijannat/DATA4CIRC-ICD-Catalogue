@@ -1,0 +1,479 @@
+openapi: 3.1.0
+info:
+  title: ICD-14 SPIP Agent Governed Data Flow API
+  version: "1.0.0"
+  description: >
+    Interface contract between the DPP/AAS Application and the SPIP Agent for governed
+    egress encryption and ingress decryption of dataspace payloads.
+servers:
+  - url: https://spip-agent.{organisationFQDN}/api/v1
+    variables:
+      organisationFQDN:
+        default: example.org
+        description: Organisation fully qualified domain name.
+paths:
+  /egress/encrypt:
+    post:
+      operationId: encryptEgress
+      summary: Encrypt egress payload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptEgressRequest'
+      responses:
+        "200":
+          description: Encryption successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncryptEgressResponse'
+        "400":
+          $ref: '#/components/responses/Problem400'
+        "401":
+          $ref: '#/components/responses/Problem401'
+        "403":
+          $ref: '#/components/responses/Problem403'
+        "429":
+          $ref: '#/components/responses/Problem429'
+        "500":
+          $ref: '#/components/responses/Problem500'
+        "502":
+          $ref: '#/components/responses/Problem502'
+        "503":
+          $ref: '#/components/responses/Problem503'
+  /ingress/decrypt:
+    post:
+      operationId: decryptIngress
+      summary: Decrypt ingress payload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecryptIngressRequest'
+      responses:
+        "200":
+          description: Decryption successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecryptIngressResponse'
+        "400":
+          $ref: '#/components/responses/Problem400'
+        "401":
+          $ref: '#/components/responses/Problem401'
+        "403":
+          $ref: '#/components/responses/Problem403'
+        "429":
+          $ref: '#/components/responses/Problem429'
+        "500":
+          $ref: '#/components/responses/Problem500'
+        "502":
+          $ref: '#/components/responses/Problem502'
+        "503":
+          $ref: '#/components/responses/Problem503'
+  /policies/validate:
+    post:
+      operationId: validatePolicy
+      summary: Validate ABE policy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyValidationRequest'
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyValidationResponse'
+        "400":
+          $ref: '#/components/responses/Problem400'
+        "401":
+          $ref: '#/components/responses/Problem401'
+        "403":
+          $ref: '#/components/responses/Problem403'
+        "500":
+          $ref: '#/components/responses/Problem500'
+  /policies/{policyId}:
+    get:
+      operationId: getPolicy
+      summary: Retrieve ABE policy by identifier
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique policy identifier issued by SPIP Platform.
+      responses:
+        "200":
+          description: Policy retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbePolicyReference'
+        "400":
+          $ref: '#/components/responses/Problem400'
+        "401":
+          $ref: '#/components/responses/Problem401'
+        "403":
+          $ref: '#/components/responses/Problem403'
+        "404":
+          $ref: '#/components/responses/Problem404'
+        "500":
+          $ref: '#/components/responses/Problem500'
+  /health:
+    get:
+      operationId: health
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: SPIP Agent process is live
+  /ready:
+    get:
+      operationId: ready
+      summary: Readiness probe
+      security: []
+      responses:
+        "200":
+          description: SPIP Agent ready and dependencies reachable
+        "503":
+          $ref: '#/components/responses/Problem503'
+  /metrics:
+    get:
+      operationId: metrics
+      summary: Prometheus metrics (network restricted)
+      security: []
+      responses:
+        "200":
+          description: Metrics payload
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Problem400:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem401:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem403:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem404:
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem429:
+      description: Too Many Requests
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem500:
+      description: Internal Server Error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem502:
+      description: Bad Gateway
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Problem503:
+      description: Service Unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    EncryptEgressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - assetId
+        - payloadContentType
+        - payload
+        - abePolicy
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uri
+        payloadContentType:
+          type: string
+        payload:
+          type: string
+          contentEncoding: base64
+        payloadHash:
+          type: string
+          description: Optional plaintext hash, format sha256:<hex>.
+        abePolicy:
+          $ref: '#/components/schemas/AbePolicyReference'
+        encryptionProfile:
+          type: object
+          additionalProperties: true
+        odrlPolicyId:
+          type: string
+          format: uri
+        auditContext:
+          type: object
+          additionalProperties: true
+
+    EncryptEgressResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - assetId
+        - cipherText
+        - cipherTextContentType
+        - envelope
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uri
+        cipherText:
+          type: string
+          contentEncoding: base64
+        cipherTextContentType:
+          type: string
+          default: application/spip-envelope+json
+        envelope:
+          $ref: '#/components/schemas/CryptoEnvelope'
+        cipherTextHash:
+          type: string
+        auditEventId:
+          type: string
+          format: uuid
+        warnings:
+          type: array
+          items:
+            type: string
+
+    DecryptIngressRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - assetId
+        - cipherText
+        - cipherTextContentType
+        - envelope
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uri
+        cipherText:
+          type: string
+          contentEncoding: base64
+        cipherTextContentType:
+          type: string
+        envelope:
+          $ref: '#/components/schemas/CryptoEnvelope'
+        expectedPayloadHash:
+          type: string
+        auditContext:
+          type: object
+          additionalProperties: true
+
+    DecryptIngressResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - assetId
+        - payload
+        - payloadContentType
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uri
+        payload:
+          type: string
+          contentEncoding: base64
+        payloadContentType:
+          type: string
+        payloadHash:
+          type: string
+        verification:
+          type: object
+          additionalProperties: true
+        warnings:
+          type: array
+          items:
+            type: string
+
+    AbePolicyReference:
+      type: object
+      additionalProperties: false
+      properties:
+        policyId:
+          type: string
+        expression:
+          type: string
+        attributeNamespace:
+          type: string
+          format: uri
+        version:
+          type: string
+        constraints:
+          type: object
+          additionalProperties: true
+      oneOf:
+        - required: [policyId]
+        - required: [expression]
+
+    CryptoEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - dataEncryptionAlgorithm
+        - keyWrappingAlgorithm
+        - iv
+        - encryptedKey
+        - abePolicyCanonical
+        - keyId
+        - createdAt
+      properties:
+        version:
+          type: string
+        dataEncryptionAlgorithm:
+          type: string
+        keyWrappingAlgorithm:
+          type: string
+        iv:
+          type: string
+          contentEncoding: base64
+        encryptedKey:
+          type: string
+          contentEncoding: base64
+        abePolicyCanonical:
+          type: string
+        keyId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        aad:
+          type: string
+          contentEncoding: base64
+        parameters:
+          type: object
+          additionalProperties: true
+
+    PolicyValidationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - abePolicy
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        abePolicy:
+          $ref: '#/components/schemas/AbePolicyReference'
+        context:
+          type: object
+          additionalProperties: true
+
+    PolicyValidationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - valid
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        valid:
+          type: boolean
+        abePolicyCanonical:
+          $ref: '#/components/schemas/AbePolicyReference'
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        correlationId:
+          type: string
+          format: uuid
+        errors:
+          type: object

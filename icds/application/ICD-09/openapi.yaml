@@ -1,0 +1,358 @@
+openapi: 3.1.0
+info:
+  title: DT/DTh Application API (ICD-09)
+  version: "1.0.0"
+  description: >
+    REST API contract between the DT/DTh Portal and the DT/DTh Application.
+servers:
+  - url: https://<dt-dth-api-hostname>/api/v1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://<keycloak-hostname>/realms/<realm>/.well-known/openid-configuration
+  schemas:
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        errorCode: { type: string }
+        traceId: { type: string }
+    TelemetryPoint:
+      type: object
+      required: [timestamp, key, value, source]
+      properties:
+        timestamp: { type: integer, format: int64, description: "Unix epoch milliseconds (UTC)" }
+        key: { type: string }
+        value:
+          oneOf:
+            - { type: number }
+            - { type: integer }
+            - { type: string }
+            - { type: boolean }
+            - { type: object }
+        unit: { type: string, description: "UCUM unit for numeric values" }
+        source: { type: string, enum: [REAL, SIMULATED] }
+        scenarioId: { type: string, format: uuid }
+        quality: { type: string, enum: [RAW, VALIDATED, SIMULATED] }
+        attributes: { type: object }
+    TelemetryQueryResult:
+      type: object
+      required: [entityId, keys, points]
+      properties:
+        entityId: { type: string, format: uuid }
+        keys:
+          type: array
+          items: { type: string }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/TelemetryPoint" }
+    IngestionResult:
+      type: object
+      required: [scenarioId, entityId, acceptedPoints, rejectedPoints, ingestionStatus, timestamp]
+      properties:
+        scenarioId: { type: string, format: uuid }
+        entityId: { type: string, format: uuid }
+        acceptedPoints: { type: integer }
+        rejectedPoints: { type: integer }
+        ingestionStatus: { type: string, enum: [QUEUED, STORED, FAILED] }
+        timestamp: { type: integer, format: int64 }
+    CreateScenarioRequest:
+      type: object
+      required: [name, entityId]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        entityId: { type: string, format: uuid }
+        parameters: { type: object }
+        timeRange:
+          type: object
+          properties:
+            startTs: { type: integer, format: int64 }
+            endTs: { type: integer, format: int64 }
+    SimulationScenario:
+      type: object
+      required: [scenarioId, name, entityId, createdBy, createdAt, status]
+      properties:
+        scenarioId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        entityId: { type: string, format: uuid }
+        createdBy: { type: string }
+        createdAt: { type: integer, format: int64 }
+        status: { type: string, enum: [CREATED, QUEUED, RUNNING, COMPLETED, FAILED] }
+        parameters: { type: object }
+        timeRange: { type: object }
+    ModelMetadata:
+      type: object
+      required: [modelId, name, modelType, format, version, etag, updatedAt, updatedBy]
+      properties:
+        modelId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        modelType: { type: string, enum: [CVCM] }
+        format: { type: string, enum: [CVCM_JSON] }
+        version: { type: integer }
+        etag: { type: string }
+        updatedAt: { type: integer, format: int64 }
+        updatedBy: { type: string }
+    CreateAnnotationRequest:
+      type: object
+      required: [type, text]
+      properties:
+        type: { type: string, enum: [COMMENT, ISSUE, DECISION, RISK] }
+        text: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        mentionUserIds:
+          type: array
+          items: { type: string, format: uuid }
+    Annotation:
+      allOf:
+        - $ref: "#/components/schemas/CreateAnnotationRequest"
+        - type: object
+          required: [annotationId, modelId, elementId, authorId, createdAt]
+          properties:
+            annotationId: { type: string, format: uuid }
+            modelId: { type: string, format: uuid }
+            elementId: { type: string }
+            authorId: { type: string }
+            createdAt: { type: integer, format: int64 }
+            resolved: { type: boolean }
+    CreateNoteRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        mentionUserIds:
+          type: array
+          items: { type: string, format: uuid }
+        relatedElementIds:
+          type: array
+          items: { type: string }
+    CollaborationNote:
+      allOf:
+        - $ref: "#/components/schemas/CreateNoteRequest"
+        - type: object
+          required: [noteId, modelId, authorId, createdAt, version]
+          properties:
+            noteId: { type: string, format: uuid }
+            modelId: { type: string, format: uuid }
+            authorId: { type: string }
+            createdAt: { type: integer, format: int64 }
+            version: { type: integer }
+    WsTicketResponse:
+      type: object
+      required: [ticket, expiresAt]
+      properties:
+        ticket: { type: string }
+        expiresAt: { type: integer, format: int64 }
+paths:
+  /dt/entities/{entityId}/telemetry:
+    get:
+      summary: Query Digital Twin telemetry
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: keys
+          in: query
+          required: true
+          schema: { type: string }
+        - name: startTs
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: endTs
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: source
+          in: query
+          required: false
+          schema: { type: string, enum: [REAL, SIMULATED, BOTH], default: BOTH }
+        - name: aggregation
+          in: query
+          required: false
+          schema: { type: string, enum: [NONE, AVG, MIN, MAX, SUM], default: NONE }
+        - name: intervalMs
+          in: query
+          required: false
+          schema: { type: integer, format: int64 }
+        - name: scenarioId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, format: int32, default: 10000 }
+      responses:
+        "200":
+          description: Telemetry query result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TelemetryQueryResult" }
+        "400": { description: Bad Request, content: { application/problem+json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } } }
+        "401": { description: Unauthorised, content: { application/problem+json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } } }
+        "403": { description: Forbidden, content: { application/problem+json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } } }
+  /dt/entities/{entityId}/telemetry/simulated:
+    post:
+      summary: Submit simulated telemetry
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: scenarioId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/TelemetryPoint" }
+      responses:
+        "202":
+          description: Accepted for ingestion
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IngestionResult" }
+        "400": { description: Bad Request, content: { application/problem+json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } } }
+        "401": { description: Unauthorised, content: { application/problem+json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } } }
+        "403": { description: Forbidden, content: { application/problem+json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } } }
+  /simulations:
+    post:
+      summary: Create simulation scenario
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateScenarioRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SimulationScenario" }
+  /models:
+    get:
+      summary: List models
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          required: false
+          schema: { type: integer, default: 50, maximum: 500 }
+        - name: modelType
+          in: query
+          required: false
+          schema: { type: string, enum: [CVCM] }
+        - name: sort
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Model page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ModelMetadata" }
+                  page: { type: integer }
+                  size: { type: integer }
+                  total: { type: integer }
+  /models/{modelId}/elements/{elementId}/annotations:
+    post:
+      summary: Create annotation
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: elementId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateAnnotationRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Annotation" }
+  /models/{modelId}/collaboration/notes:
+    post:
+      summary: Create collaboration note
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateNoteRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CollaborationNote" }
+  /models/{modelId}/realtime/tickets:
+    post:
+      summary: Request WebSocket ticket
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Ticket issued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WsTicketResponse" }
+x-websocket:
+  /models/{modelId}/realtime:
+    protocol: "wss"
+    subprotocol: "dt-dth.v1"
+    queryParameters:
+      ticket: "WebSocket ticket from /models/{modelId}/realtime/tickets"
+    messages:
+      - name: model.patch
+        payload:
+          type: object
+          properties:
+            baseVersion: { type: integer }
+            patch: { type: array }
+      - name: ack
+        payload:
+          type: object
+          properties:
+            newVersion: { type: integer }

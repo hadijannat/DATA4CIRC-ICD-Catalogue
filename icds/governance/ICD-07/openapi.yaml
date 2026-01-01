@@ -1,0 +1,851 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: DATA4CIRC SPIP Governance API
+  version: 1.0.0
+  description: OpenAPI Specification for ICD-07 (DS4CIRC Portal <-> SPIP Platform).
+servers:
+- url: https://{spip_host}/api/v1
+  variables:
+    spip_host:
+      default: spip.example.internal
+      description: SPIP Platform host name.
+security:
+- oauth2:
+  - spip.read
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /ready:
+    get:
+      summary: Readiness probe
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          $ref: '#/components/responses/ProblemDetails'
+  /version:
+    get:
+      summary: Service and API version metadata
+      operationId: getVersion
+      security:
+      - oauth2:
+        - spip.read
+      responses:
+        '200':
+          description: Version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+  /policies:
+    get:
+      summary: List policies
+      operationId: listPolicies
+      security:
+      - oauth2:
+        - spip.policy.read
+      parameters:
+      - name: ownerOrgId
+        in: query
+        schema:
+          type: string
+        required: false
+        description: Filter by owner organisation identifier.
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - ACTIVE
+          - ARCHIVED
+        required: false
+        description: Filter by status.
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        required: false
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        required: false
+      responses:
+        '200':
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyListResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+    post:
+      summary: Create policy
+      operationId: createPolicy
+      security:
+      - oauth2:
+        - spip.policy.write
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        schema:
+          type: string
+          format: uuid
+        required: false
+      - name: X-Correlation-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+        required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCreateRequest'
+      responses:
+        '201':
+          description: Created
+          headers:
+            ETag:
+              schema:
+                type: string
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '409':
+          $ref: '#/components/responses/ProblemDetails'
+        '422':
+          $ref: '#/components/responses/ProblemDetails'
+  /policies/{policyId}:
+    get:
+      summary: Retrieve policy
+      operationId: getPolicy
+      security:
+      - oauth2:
+        - spip.policy.read
+      parameters:
+      - $ref: '#/components/parameters/policyId'
+      responses:
+        '200':
+          description: Policy
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+    put:
+      summary: Replace policy
+      operationId: replacePolicy
+      security:
+      - oauth2:
+        - spip.policy.write
+      parameters:
+      - $ref: '#/components/parameters/policyId'
+      - name: If-Match
+        in: header
+        schema:
+          type: string
+        required: true
+        description: ETag value for optimistic concurrency control.
+      - name: X-Correlation-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+        required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+        '409':
+          $ref: '#/components/responses/ProblemDetails'
+        '412':
+          $ref: '#/components/responses/ProblemDetails'
+        '422':
+          $ref: '#/components/responses/ProblemDetails'
+    delete:
+      summary: Archive policy
+      operationId: archivePolicy
+      security:
+      - oauth2:
+        - spip.policy.write
+      parameters:
+      - $ref: '#/components/parameters/policyId'
+      responses:
+        '204':
+          description: Archived
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+  /policies/{policyId}/validate:
+    post:
+      summary: Validate and compile policy
+      operationId: validatePolicy
+      security:
+      - oauth2:
+        - spip.policy.write
+      parameters:
+      - $ref: '#/components/parameters/policyId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyValidationRequest'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyValidationResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+        '422':
+          $ref: '#/components/responses/ProblemDetails'
+  /keys/issue:
+    post:
+      summary: Issue encryption/decryption key material (wrapped)
+      operationId: issueKey
+      security:
+      - oauth2:
+        - spip.key.issue
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        schema:
+          type: string
+          format: uuid
+        required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyIssueRequest'
+      responses:
+        '200':
+          description: Issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyIssueResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+        '422':
+          $ref: '#/components/responses/ProblemDetails'
+  /crypto/encrypt:
+    post:
+      summary: Encrypt payload under policy
+      operationId: encrypt
+      security:
+      - oauth2:
+        - spip.crypto.encrypt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptRequest'
+      responses:
+        '200':
+          description: Ciphertext
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncryptResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+        '413':
+          $ref: '#/components/responses/ProblemDetails'
+        '422':
+          $ref: '#/components/responses/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/ProblemDetails'
+  /crypto/decrypt:
+    post:
+      summary: Decrypt payload under policy
+      operationId: decrypt
+      security:
+      - oauth2:
+        - spip.crypto.decrypt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecryptRequest'
+      responses:
+        '200':
+          description: Plaintext
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecryptResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+        '404':
+          $ref: '#/components/responses/ProblemDetails'
+        '413':
+          $ref: '#/components/responses/ProblemDetails'
+        '422':
+          $ref: '#/components/responses/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/ProblemDetails'
+  /audit/events:
+    get:
+      summary: Query audit events
+      operationId: getAuditEvents
+      security:
+      - oauth2:
+        - spip.audit.read
+      parameters:
+      - name: resourceId
+        in: query
+        schema:
+          type: string
+        required: false
+      - name: eventType
+        in: query
+        schema:
+          type: string
+        required: false
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 100
+        required: false
+      responses:
+        '200':
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventListResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails'
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
+components:
+  parameters:
+    policyId:
+      name: policyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Policy identifier (UUID).
+  responses:
+    ProblemDetails:
+      description: RFC 9457 Problem Details response
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://{idp_host}/realms/{realm}/protocol/openid-connect/token
+          scopes:
+            spip.read: Read access to service metadata.
+            spip.policy.read: Read policies.
+            spip.policy.write: Create/update/archive policies.
+            spip.key.issue: Issue key material.
+            spip.crypto.encrypt: Encrypt payloads.
+            spip.crypto.decrypt: Decrypt payloads.
+            spip.audit.read: Read audit events.
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - UP
+          - DOWN
+        components:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - status
+    VersionInfo:
+      type: object
+      properties:
+        service:
+          type: string
+        version:
+          type: string
+        buildHash:
+          type: string
+        openapiVersion:
+          type: string
+      required:
+      - service
+      - version
+    PolicyCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 128
+        description:
+          type: string
+          maxLength: 2048
+        policyType:
+          type: string
+          enum:
+          - CP_ABE
+          - KP_ABE
+        abePolicy:
+          $ref: '#/components/schemas/AbePolicy'
+        odrlPolicy:
+          type: object
+          description: Optional ODRL policy (JSON-LD).
+          additionalProperties: true
+        ownerOrgId:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 32
+      required:
+      - name
+      - policyType
+      - abePolicy
+      - ownerOrgId
+    PolicyUpdateRequest:
+      allOf:
+      - $ref: '#/components/schemas/PolicyCreateRequest'
+      - type: object
+        properties:
+          status:
+            type: string
+            enum:
+            - DRAFT
+            - ACTIVE
+            - ARCHIVED
+    AbePolicy:
+      type: object
+      properties:
+        scheme:
+          type: string
+          enum:
+          - CP-ABE
+        expression:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      required:
+      - scheme
+      - expression
+    PolicyResponse:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        policyType:
+          type: string
+        abePolicy:
+          $ref: '#/components/schemas/AbePolicy'
+        odrlPolicy:
+          type: object
+          additionalProperties: true
+        ownerOrgId:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - ACTIVE
+          - ARCHIVED
+        version:
+          type: integer
+          minimum: 1
+        integrityHash:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        etag:
+          type: string
+      required:
+      - policyId
+      - name
+      - policyType
+      - abePolicy
+      - ownerOrgId
+      - status
+      - version
+      - integrityHash
+      - createdAt
+      - updatedAt
+    PolicyListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyResponse'
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+      required:
+      - items
+      - limit
+      - offset
+    PolicyValidationRequest:
+      type: object
+      properties:
+        strict:
+          type: boolean
+          default: true
+        sampleAttributes:
+          type: object
+          additionalProperties:
+            type: string
+    PolicyValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+      required:
+      - valid
+    KeyIssueRequest:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        subjectId:
+          type: string
+        subjectAttributes:
+          type: object
+          additionalProperties:
+            type: string
+        keyType:
+          type: string
+          enum:
+          - ENCRYPT
+          - DECRYPT
+        clientKeyId:
+          type: string
+          description: Identifier of client public key used for key wrapping.
+      required:
+      - policyId
+      - subjectId
+      - subjectAttributes
+      - keyType
+    KeyIssueResponse:
+      type: object
+      properties:
+        keyId:
+          type: string
+          format: uuid
+        policyId:
+          type: string
+          format: uuid
+        subjectId:
+          type: string
+        keyType:
+          type: string
+          enum:
+          - ENCRYPT
+          - DECRYPT
+        algorithm:
+          type: string
+        keyMaterialJwe:
+          type: string
+          description: Wrapped key material as a JWE compact serialisation.
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+      required:
+      - keyId
+      - policyId
+      - subjectId
+      - keyType
+      - algorithm
+      - keyMaterialJwe
+    EncryptRequest:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        plaintextB64:
+          type: string
+          format: byte
+        plaintextContentType:
+          type: string
+        aadB64:
+          type: string
+          format: byte
+      required:
+      - policyId
+      - plaintextB64
+      - plaintextContentType
+    EncryptResponse:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        ciphertextB64:
+          type: string
+          format: byte
+        ciphertextContentType:
+          type: string
+        algorithm:
+          type: string
+        integrity:
+          type: object
+          properties:
+            alg:
+              type: string
+            value:
+              type: string
+          required:
+          - alg
+          - value
+      required:
+      - policyId
+      - ciphertextB64
+      - ciphertextContentType
+      - algorithm
+    DecryptRequest:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        ciphertextB64:
+          type: string
+          format: byte
+        ciphertextContentType:
+          type: string
+      required:
+      - policyId
+      - ciphertextB64
+      - ciphertextContentType
+    DecryptResponse:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        plaintextB64:
+          type: string
+          format: byte
+        plaintextContentType:
+          type: string
+      required:
+      - policyId
+      - plaintextB64
+      - plaintextContentType
+    AuditEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        actorSubjectId:
+          type: string
+        actorOrgId:
+          type: string
+        eventType:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+        outcome:
+          type: string
+          enum:
+          - SUCCESS
+          - DENY
+          - ERROR
+        correlationId:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+      required:
+      - eventId
+      - timestamp
+      - eventType
+      - resourceType
+      - resourceId
+      - outcome
+    AuditEventListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        limit:
+          type: integer
+      required:
+      - items
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errorCode:
+          type: string
+        correlationId:
+          type: string
+        retryable:
+          type: boolean
+        remediation:
+          type: string
+        invalidParams:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              reason:
+                type: string
+            required:
+            - name
+            - reason
+      required:
+      - type
+      - title
+      - status

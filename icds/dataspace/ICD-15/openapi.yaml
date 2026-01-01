@@ -1,0 +1,791 @@
+openapi: 3.1.0
+info:
+  title: DATA4CIRC SPIP Agent API
+  version: "1.0"
+  description: >
+    Interface Control Document ICD-15 - Governed egress/ingress data flow between the
+    DT/DTh Application and the SPIP Agent. The API provides cryptographic envelope
+    operations (encrypt/decrypt), policy management, and audit query capabilities.
+  license:
+    name: Apache-2.0
+servers:
+  - url: https://{host}:{port}
+    variables:
+      host:
+        default: spip-agent.local
+      port:
+        default: "8443"
+security:
+  - BearerAuth: []
+tags:
+  - name: crypto
+    description: Cryptographic envelope operations
+  - name: policy
+    description: Policy management operations
+  - name: audit
+    description: Audit and monitoring operations
+  - name: health
+    description: Health and readiness operations
+paths:
+  /api/v1/crypto/encrypt:
+    post:
+      tags: [crypto]
+      operationId: encryptPayload
+      summary: Encrypt plaintext payload and bind usage policy
+      description: >
+        Encrypt a plaintext payload, wrap the content encryption key (CEK) using
+        attribute-based encryption, and associate an ODRL usage policy. The response
+        contains a Protected Data Package suitable for governed dataspace transfer.
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - $ref: "#/components/parameters/ContentDigest"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EncryptionRequest"
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/EncryptionRequestMultipart"
+      responses:
+        "200":
+          description: Encryption completed
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EncryptionResponse"
+        "400":
+          $ref: "#/components/responses/ProblemDetails400"
+        "401":
+          $ref: "#/components/responses/ProblemDetails401"
+        "403":
+          $ref: "#/components/responses/ProblemDetails403"
+        "413":
+          $ref: "#/components/responses/ProblemDetails413"
+        "415":
+          $ref: "#/components/responses/ProblemDetails415"
+        "422":
+          $ref: "#/components/responses/ProblemDetails422"
+        "429":
+          $ref: "#/components/responses/ProblemDetails429"
+        "500":
+          $ref: "#/components/responses/ProblemDetails500"
+        "503":
+          $ref: "#/components/responses/ProblemDetails503"
+
+  /api/v1/crypto/decrypt:
+    post:
+      tags: [crypto]
+      operationId: decryptPayload
+      summary: Decrypt Protected Data Package
+      description: >
+        Decrypt a Protected Data Package following policy evaluation and key retrieval.
+        The response contains the plaintext payload encoded as base64 together with
+        contentType and digest metadata.
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecryptionRequest"
+      responses:
+        "200":
+          description: Decryption completed
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecryptionResponse"
+        "400":
+          $ref: "#/components/responses/ProblemDetails400"
+        "401":
+          $ref: "#/components/responses/ProblemDetails401"
+        "403":
+          $ref: "#/components/responses/ProblemDetails403"
+        "404":
+          $ref: "#/components/responses/ProblemDetails404"
+        "415":
+          $ref: "#/components/responses/ProblemDetails415"
+        "422":
+          $ref: "#/components/responses/ProblemDetails422"
+        "429":
+          $ref: "#/components/responses/ProblemDetails429"
+        "500":
+          $ref: "#/components/responses/ProblemDetails500"
+        "503":
+          $ref: "#/components/responses/ProblemDetails503"
+
+  /api/v1/policies:
+    post:
+      tags: [policy]
+      operationId: createPolicy
+      summary: Create usage policy
+      description: >
+        Create an ODRL policy document for governed dataspace exchange. The policy
+        document is stored in the policy repository and referenced by policyId.
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyCreateRequest"
+      responses:
+        "201":
+          description: Policy created
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyResponse"
+        "400":
+          $ref: "#/components/responses/ProblemDetails400"
+        "401":
+          $ref: "#/components/responses/ProblemDetails401"
+        "403":
+          $ref: "#/components/responses/ProblemDetails403"
+        "422":
+          $ref: "#/components/responses/ProblemDetails422"
+        "500":
+          $ref: "#/components/responses/ProblemDetails500"
+        "503":
+          $ref: "#/components/responses/ProblemDetails503"
+
+  /api/v1/policies/{policyId}:
+    get:
+      tags: [policy]
+      operationId: getPolicy
+      summary: Retrieve usage policy by identifier
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Policy identifier (URI/URN)
+      responses:
+        "200":
+          description: Policy retrieved
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyResponse"
+        "401":
+          $ref: "#/components/responses/ProblemDetails401"
+        "403":
+          $ref: "#/components/responses/ProblemDetails403"
+        "404":
+          $ref: "#/components/responses/ProblemDetails404"
+        "500":
+          $ref: "#/components/responses/ProblemDetails500"
+        "503":
+          $ref: "#/components/responses/ProblemDetails503"
+
+  /api/v1/policies/validate:
+    post:
+      tags: [policy]
+      operationId: validatePolicy
+      summary: Validate policy document
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyValidateRequest"
+      responses:
+        "200":
+          description: Validation completed
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyValidationResponse"
+        "400":
+          $ref: "#/components/responses/ProblemDetails400"
+        "401":
+          $ref: "#/components/responses/ProblemDetails401"
+        "403":
+          $ref: "#/components/responses/ProblemDetails403"
+        "422":
+          $ref: "#/components/responses/ProblemDetails422"
+        "500":
+          $ref: "#/components/responses/ProblemDetails500"
+        "503":
+          $ref: "#/components/responses/ProblemDetails503"
+
+  /api/v1/audit/events:
+    get:
+      tags: [audit]
+      operationId: listAuditEvents
+      summary: Query audit events
+      description: >
+        Query audit events generated by cryptographic processing and policy decisions.
+        Response ordering is descending by eventTime.
+      parameters:
+        - $ref: "#/components/parameters/XRequestId"
+        - name: datasetId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by dataset identifier
+        - name: policyId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by policy identifier
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Inclusive lower bound for eventTime (RFC 3339)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Exclusive upper bound for eventTime (RFC 3339)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          description: Maximum number of events returned
+      responses:
+        "200":
+          description: Audit events returned
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+                  nextPageToken:
+                    type: string
+                    nullable: true
+                required: [events]
+        "401":
+          $ref: "#/components/responses/ProblemDetails401"
+        "403":
+          $ref: "#/components/responses/ProblemDetails403"
+        "500":
+          $ref: "#/components/responses/ProblemDetails500"
+        "503":
+          $ref: "#/components/responses/ProblemDetails503"
+
+  /health:
+    get:
+      tags: [health]
+      security: []
+      operationId: health
+      summary: Health check
+      responses:
+        "200":
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [UP]
+                  service:
+                    type: string
+                required: [status, service]
+
+  /ready:
+    get:
+      tags: [health]
+      security: []
+      operationId: readiness
+      summary: Readiness check
+      responses:
+        "200":
+          description: Service readiness status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [READY]
+                  dependencies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        status:
+                          type: string
+                          enum: [UP, DOWN]
+                      required: [name, status]
+                required: [status, dependencies]
+
+  /metrics:
+    get:
+      tags: [audit]
+      operationId: metrics
+      summary: Prometheus metrics
+      description: Prometheus exposition format
+      responses:
+        "200":
+          description: Metrics returned
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Correlation identifier for request tracing.
+    ContentDigest:
+      name: Content-Digest
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Representation digest as defined in RFC 9530.
+
+  headers:
+    XRequestId:
+      schema:
+        type: string
+        format: uuid
+      description: Correlation identifier echoed by the service.
+
+  responses:
+    ProblemDetails400:
+      description: Invalid request
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          examples:
+            validationError:
+              value:
+                type: "urn:data4circ:problem:validation-error"
+                title: "Validation error"
+                status: 400
+                detail: "Request body validation failed"
+                instance: "urn:uuid:00000000-0000-0000-0000-000000000000"
+                errorCode: "VALIDATION_ERROR"
+    ProblemDetails401:
+      description: Authentication failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails403:
+      description: Authorisation failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails404:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails413:
+      description: Payload too large
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails415:
+      description: Unsupported media type
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails422:
+      description: Semantic validation failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails429:
+      description: Rate limited
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails500:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ProblemDetails503:
+      description: Service unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+  schemas:
+    EncryptionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - datasetId
+        - contentType
+        - payloadBase64
+        - encryptionProfile
+        - recipientSelector
+        - policy
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        datasetId:
+          type: string
+          description: Dataset identifier used for policy targeting and asset binding.
+        contentType:
+          type: string
+          description: IANA media type of the plaintext payload.
+        payloadBase64:
+          type: string
+          contentEncoding: base64
+          description: Plaintext payload encoded as base64.
+        encryptionProfile:
+          type: string
+          enum: [ABE_AES256_GCM]
+          description: Cryptographic profile identifier.
+        recipientSelector:
+          $ref: "#/components/schemas/RecipientSelector"
+        policy:
+          $ref: "#/components/schemas/PolicyDocument"
+
+    EncryptionRequestMultipart:
+      type: object
+      required:
+        - requestId
+        - datasetId
+        - contentType
+        - file
+        - encryptionProfile
+        - recipientSelector
+        - policy
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        datasetId:
+          type: string
+        contentType:
+          type: string
+        file:
+          type: string
+          format: binary
+          description: Plaintext payload as binary file upload.
+        encryptionProfile:
+          type: string
+          enum: [ABE_AES256_GCM]
+        recipientSelector:
+          $ref: "#/components/schemas/RecipientSelector"
+        policy:
+          $ref: "#/components/schemas/PolicyDocument"
+
+    EncryptionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - package
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        package:
+          $ref: "#/components/schemas/ProtectedDataPackage"
+        spip:
+          $ref: "#/components/schemas/SpipProcessingInfo"
+
+    DecryptionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - package
+        - subjectAttributes
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        package:
+          $ref: "#/components/schemas/ProtectedDataPackage"
+        subjectAttributes:
+          $ref: "#/components/schemas/AttributeSet"
+
+    DecryptionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+        - contentType
+        - payloadBase64
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        contentType:
+          type: string
+        payloadBase64:
+          type: string
+          contentEncoding: base64
+        contentDigest:
+          type: string
+          description: Digest of plaintext representation (RFC 9530 format).
+        policyId:
+          type: string
+          nullable: true
+
+    ProtectedDataPackage:
+      type: object
+      additionalProperties: false
+      required:
+        - packageId
+        - datasetId
+        - contentType
+        - contentCiphertextBase64
+        - cekCiphertextBase64
+        - encryptionAlgorithm
+        - keyWrappingAlgorithm
+        - ivBase64
+        - authTagBase64
+        - policy
+        - createdAt
+      properties:
+        packageId:
+          type: string
+          format: uuid
+        datasetId:
+          type: string
+        contentType:
+          type: string
+        contentCiphertextBase64:
+          type: string
+          contentEncoding: base64
+        cekCiphertextBase64:
+          type: string
+          contentEncoding: base64
+        encryptionAlgorithm:
+          type: string
+          enum: [AES-256-GCM]
+        keyWrappingAlgorithm:
+          type: string
+          enum: [CP-ABE]
+        ivBase64:
+          type: string
+          contentEncoding: base64
+        authTagBase64:
+          type: string
+          contentEncoding: base64
+        contentDigest:
+          type: string
+          nullable: true
+        policyId:
+          type: string
+          nullable: true
+        policy:
+          $ref: "#/components/schemas/PolicyDocument"
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    PolicyDocument:
+      type: object
+      description: ODRL policy document serialised as JSON-LD.
+      additionalProperties: true
+
+    PolicyCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [requestId, policy]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        policy:
+          $ref: "#/components/schemas/PolicyDocument"
+
+    PolicyValidateRequest:
+      type: object
+      additionalProperties: false
+      required: [requestId, policy]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        policy:
+          $ref: "#/components/schemas/PolicyDocument"
+
+    PolicyResponse:
+      type: object
+      additionalProperties: false
+      required: [requestId, policyId, policy]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        policyId:
+          type: string
+        policy:
+          $ref: "#/components/schemas/PolicyDocument"
+
+    PolicyValidationResponse:
+      type: object
+      additionalProperties: false
+      required: [requestId, valid]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+          nullable: true
+
+    RecipientSelector:
+      type: object
+      additionalProperties: false
+      required: [recipientParticipantIds, recipientAttributes]
+      properties:
+        recipientParticipantIds:
+          type: array
+          items:
+            type: string
+        recipientAttributes:
+          $ref: "#/components/schemas/AttributeSet"
+
+    AttributeSet:
+      type: object
+      additionalProperties:
+        type: string
+      description: Attribute set used for ABAC/ABE evaluation.
+
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, eventTime, operation, datasetId, outcome]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventTime:
+          type: string
+          format: date-time
+        operation:
+          type: string
+          enum: [ENCRYPT, DECRYPT, POLICY_CREATE, POLICY_VALIDATE]
+        datasetId:
+          type: string
+        policyId:
+          type: string
+          nullable: true
+        subjectId:
+          type: string
+          nullable: true
+        outcome:
+          type: string
+          enum: [SUCCESS, DENIED, ERROR]
+        correlationId:
+          type: string
+          nullable: true
+
+    SpipProcessingInfo:
+      type: object
+      additionalProperties: false
+      required: [transactionId, policyEvaluation]
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        policyEvaluation:
+          type: string
+          enum: [PERMITTED, DENIED]
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457 problem details object with DATA4CIRC extension fields.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errorCode:
+          type: string
+        correlationId:
+          type: string
+        retriable:
+          type: boolean
