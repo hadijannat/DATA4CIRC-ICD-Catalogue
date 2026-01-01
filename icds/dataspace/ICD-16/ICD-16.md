@@ -601,8 +601,8 @@ services:
 
 | Env Variable / Key | Default | Required | Description |
 |--------------------|---------|----------|-------------|
-| SPIP_PLATFORM_BASE_URL | — | Yes | Base URL of the SPIP platform REST API. |
-| KEYCLOAK_URL | — | Yes | Keycloak base URL for OpenID Connect discovery and token validation. |
+| SPIP_PLATFORM_BASE_URL | None | Yes | Base URL of the SPIP platform REST API. |
+| KEYCLOAK_URL | None | Yes | Keycloak base URL for OpenID Connect discovery and token validation. |
 | KEYCLOAK_REALM | data4circ | Yes | Keycloak realm name. |
 | TLS_CA_CERT_PATH | /etc/tls/ca.crt | Yes | Path to trusted Certificate Authority bundle for TLS validation. |
 | TLS_SERVER_CERT_PATH | /etc/tls/tls.crt | Yes | Path to SPIP agent TLS server certificate. |
